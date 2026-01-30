@@ -12,6 +12,27 @@ export interface Song {
   image_path: string;
 }
 
+/** DB row from public.songs (id is number). */
+export type SongRow = {
+  id: number;
+  user_id: string | null;
+  author: string | null;
+  title: string | null;
+  song_path: string | null;
+  image_path: string | null;
+};
+
+export function mapSongRowToSong(row: SongRow): Song {
+  return {
+    id: String(row.id),
+    user_id: row.user_id ?? '',
+    author: row.author ?? '',
+    title: row.title ?? '',
+    song_path: row.song_path ?? '',
+    image_path: row.image_path ?? '',
+  };
+}
+
 /** Navidrome (Subsonic) track – from getSong / Child. */
 export interface NavidromeTrack {
   id: string;

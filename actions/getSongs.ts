@@ -1,4 +1,4 @@
-import { Song } from '@/types';
+import { Song, mapSongRowToSong } from '@/types';
 import { createClient } from '@/lib/supabase/server';
 
 export const getSongs = async (): Promise<Song[]> => {
@@ -13,5 +13,5 @@ export const getSongs = async (): Promise<Song[]> => {
     console.log(error);
   }
 
-  return (data as Song[]) || [];
+  return (data ?? []).map(mapSongRowToSong);
 };

@@ -78,7 +78,7 @@ async function main() {
       name: product.name ?? PRODUCT_NAME,
       description: product.description ?? PRODUCT_DESCRIPTION,
       image: product.images?.[0] ?? null,
-      metadata: (product.metadata ?? {}) as Record<string, unknown>,
+      metadata: (product.metadata ?? {}) as Database['public']['Tables']['products']['Insert']['metadata'],
     };
     await supabase.from('products').upsert([productRow]);
 
@@ -92,7 +92,7 @@ async function main() {
       type: 'recurring',
       interval: (priceDetails.recurring?.interval ?? PRICE_INTERVAL) as Database['public']['Enums']['pricing_plan_interval'],
       interval_count: priceDetails.recurring?.interval_count ?? 1,
-      metadata: (priceDetails.metadata ?? {}) as Record<string, unknown>,
+      metadata: (priceDetails.metadata ?? {}) as Database['public']['Tables']['prices']['Insert']['metadata'],
     };
     await supabase.from('prices').upsert([priceRow]);
     console.log('Synced product and price to Supabase.');
