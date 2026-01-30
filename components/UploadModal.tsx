@@ -5,11 +5,11 @@ import uniqid from 'uniqid';
 import { useState } from 'react';
 import { FieldValues, SubmitHandler, useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
-import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useRouter } from 'next/navigation';
 
 import { useUploadModal } from '@/hooks/useUploadModal';
 import { useUser } from '@/hooks/useUser';
+import { useSupabaseClient } from '@/providers/SupabaseProvider';
 
 import { Modal } from './Modal';
 import { Input } from './Input';
@@ -89,13 +89,27 @@ export const UploadModal = () => {
       }
 
       //* Insert new song record in the Supabase 'songs' table
-      const { error: supabaseError } = await supabaseClient.from('songs').insert({
-        user_id: user.id,
-        title: values.title,
-        author: values.author,
-        image_path: imageData.path,
-        song_path: songData.path,
-      });
+      const { error: supabaseError } = await (
+        supabaseClient as unknown as {
+          from: (t: string) => {
+            insert: (v: {
+              user_id: string;
+              title: string;
+              author: string;
+              image_path: string;
+              song_path: string;
+            }) => Promise<{ error: { message: string } | null }>;
+          };
+        }
+      )
+        .from('songs')
+        .insert({
+          user_id: user.id,
+          title: values.title,
+          author: values.author,
+          image_path: imageData.path,
+          song_path: songData.path,
+        });
 
       if (supabaseError) {
         setIsLoading(false);

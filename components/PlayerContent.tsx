@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 
-import { Song } from '@/types';
+import type { Track } from '@/types';
 
 import { usePlayer } from '@/hooks/usePlayer';
 
 import { BsPauseFill, BsPlayFill } from 'react-icons/bs';
 import { AiFillBackward, AiFillStepForward } from 'react-icons/ai';
 import { HiSpeakerXMark, HiSpeakerWave } from 'react-icons/hi2';
+import { MdShuffle, MdRepeat, MdRepeatOne } from 'react-icons/md';
 
 import { MediaItem } from './MediaItem';
 import { LikeButton } from './LikeButton';
@@ -16,11 +17,11 @@ import { Slider } from './Slider';
 import useSound from 'use-sound';
 
 interface PlayerContentProps {
-  song: Song;
+  track: Track;
   songUrl: string;
 }
 
-export const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) => {
+export const PlayerContent: React.FC<PlayerContentProps> = ({ track, songUrl }) => {
   const player = usePlayer();
   const [volume, setVolume] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -28,51 +29,52 @@ export const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) =
   const Icon = isPlaying ? BsPauseFill : BsPlayFill;
   const VolumeIcon = volume === 0 ? HiSpeakerXMark : HiSpeakerWave;
 
-  //* Play the next song in the playlist
+  const order =
+    player.shuffle && player.shuffledIds?.length
+      ? player.shuffledIds
+      : player.ids;
+
   const onPlayNextSong = () => {
-    if (player.ids.length === 0) {
+    if (order.length === 0) return;
+    const currentIndex = order.indexOf(player.activeId ?? '');
+    if (currentIndex < 0) return;
+    const nextIndex = currentIndex + 1;
+    if (nextIndex >= order.length) {
+      if (player.repeat === 'all') player.setId(order[0]);
       return;
     }
-
-    const currentIndex = player.ids.findIndex((id) => id === player.activeId);
-    //* Check if there is a next song to play
-    const nextSong = player.ids[currentIndex + 1];
-    //* If song is last in array, reset playlist
-    if (!nextSong) {
-      return player.setId(player.ids[0]);
-    }
-
-    player.setId(nextSong);
+    player.setId(order[nextIndex]);
   };
 
-  //* Play the previous song in the playlist
   const onPlayPreviousSong = () => {
-    if (player.ids.length === 0) {
+    if (order.length === 0) return;
+    const currentIndex = order.indexOf(player.activeId ?? '');
+    if (currentIndex < 0) return;
+    const prevIndex = currentIndex - 1;
+    if (prevIndex < 0) {
+      if (player.repeat === 'all') player.setId(order[order.length - 1]);
       return;
     }
-
-    const currentIndex = player.ids.findIndex((id) => id === player.activeId);
-    //* Check the song BEFORE the one currently playing
-    const previousSong = player.ids[currentIndex - 1];
-
-    //? What if the song we are currently playing is FIRST in the array & we click on play previous song
-    //! Don't load the same song
-    //* Load the LAST song in the array, go backwards
-    if (!previousSong) {
-      return player.setId(player.ids[player.ids.length - 1]);
-    }
-
-    player.setId(previousSong);
+    player.setId(order[prevIndex]);
   };
 
   const [play, { pause, sound }] = useSound(songUrl, {
     volume: volume,
-    //* Play song
     onplay: () => setIsPlaying(true),
-    //* End song then immediately play next song
     onend: () => {
       setIsPlaying(false);
-      onPlayNextSong();
+      if (track.source === 'navidrome') {
+        fetch('/api/navidrome/scrobble', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: track.id }),
+        }).catch(() => {});
+      }
+      if (player.repeat === 'one') {
+        play();
+      } else {
+        onPlayNextSong();
+      }
     },
     onpause: () => setIsPlaying(false),
     format: ['mp3'],
@@ -125,8 +127,8 @@ export const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) =
                 gap-x-4
                 "
         >
-          <MediaItem data={song} />
-          <LikeButton songId={song.id} />
+          <MediaItem data={track} />
+          <LikeButton track={track} />
         </div>
       </div>
 
@@ -143,8 +145,10 @@ export const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) =
         <div
           onClick={handlePlay}
           className="
-                h-10
-                w-10
+                min-h-[44px]
+                min-w-[44px]
+                h-11
+                w-11
                 flex
                 items-center
                 justify-center
@@ -153,12 +157,14 @@ export const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) =
                 p-1
                 cursor-pointer
                 "
+          role="button"
+          aria-label={isPlaying ? 'Pause' : 'Play'}
         >
           <Icon size={30} className="text-black" />
         </div>
       </div>
 
-      {/* //* Desktop View for the playbutton */}
+      {/* Desktop: shuffle, prev, play, next, repeat */}
       <div
         className="
             hidden
@@ -168,45 +174,47 @@ export const PlayerContent: React.FC<PlayerContentProps> = ({ song, songUrl }) =
             items-center
             w-full
             max-w-[722px]
-            gap-x-6
+            gap-x-4
             "
       >
+        <MdShuffle
+          size={22}
+          onClick={() => player.toggleShuffle()}
+          className={`cursor-pointer transition ${
+            player.shuffle ? 'text-green-500' : 'text-neutral-400 hover:text-white'
+          }`}
+        />
         <AiFillBackward
           onClick={onPlayPreviousSong}
-          size={30}
-          className="
-                text-neutral-400
-                cursor-pointer
-                hover:text-white
-                transistion
-                "
+          size={28}
+          className="text-neutral-400 cursor-pointer hover:text-white transition"
         />
         <div
           onClick={handlePlay}
-          className="
-                flex
-                items-center
-                justify-center
-                h-10
-                w-10
-                rounded-full
-                bg-white
-                p-1
-                cursor-pointer
-                "
+          className="flex items-center justify-center h-10 w-10 rounded-full bg-white p-1 cursor-pointer"
         >
           <Icon size={30} className="text-black" />
         </div>
         <AiFillStepForward
           onClick={onPlayNextSong}
-          size={30}
-          className="
-                text-neutral-400
-                cursor-pointer
-                hover:text-white
-                transition
-                "
+          size={28}
+          className="text-neutral-400 cursor-pointer hover:text-white transition"
         />
+        <button
+          type="button"
+          onClick={() => player.cycleRepeat()}
+          className="flex items-center justify-center text-neutral-400 hover:text-white transition"
+          aria-label="Repeat"
+        >
+          {player.repeat === 'one' ? (
+            <MdRepeatOne size={22} className="text-green-500" />
+          ) : (
+            <MdRepeat
+              size={22}
+              className={player.repeat === 'all' ? 'text-green-500' : ''}
+            />
+          )}
+        </button>
       </div>
 
       <div className="hidden md:flex w-full justify-end pr-2">

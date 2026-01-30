@@ -1,9 +1,20 @@
+/**
+ * Stripe webhook handler. Receives product/price/subscription events and syncs to Supabase.
+ *
+ * Register this endpoint in Stripe Dashboard:
+ *   Developers → Webhooks → Add endpoint
+ *   URL: https://your-domain.com/api/webhooks (prod) or use Stripe CLI for local: stripe listen --forward-to localhost:3000/api/webhooks
+ *   Events: product.created, product.updated, price.created, price.updated, checkout.session.completed, customer.subscription.created, customer.subscription.updated, customer.subscription.deleted
+ *   Copy the signing secret to STRIPE_WEBHOOK_SECRET in .env.local
+ */
 import Stripe from 'stripe';
 import he from 'he';
 
 import { NextResponse } from 'next/server';
 
 import { headers } from 'next/headers';
+
+export const dynamic = 'force-dynamic';
 
 import { stripe } from '@/libs/stripe';
 import {
@@ -25,13 +36,20 @@ const relevantEvents = new Set([
 
 export async function POST(request: Request) {
   const body = await request.text();
-  const sig = headers().get('Stripe-Signature');
+  const headersList = await headers();
+  const sig = headersList.get('Stripe-Signature');
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   let event: Stripe.Event;
 
+  if (!sig || !webhookSecret) {
+    return NextResponse.json(
+      { error: 'Missing Stripe-Signature or STRIPE_WEBHOOK_SECRET' },
+      { status: 400 }
+    );
+  }
+
   try {
-    if (!sig || !webhookSecret) return;
     event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
   } catch (error: any) {
     console.log('Error message:' + error.message);
@@ -51,9 +69,9 @@ export async function POST(request: Request) {
           await upsertPriceRecord(event.data.object as Stripe.Price);
           break;
 
-        case 'customer.subscription-created':
-        case 'customer.subscription-updated':
-        case 'customer.subscription-deleted':
+        case 'customer.subscription.created':
+        case 'customer.subscription.updated':
+        case 'customer.subscription.deleted':
           const subscription = event.data.object as Stripe.Subscription;
           // Validate subscription properties before passing to manage function
           if (!subscription.id || !subscription.customer) {
@@ -62,7 +80,7 @@ export async function POST(request: Request) {
           await manageSubscriptionStatusChange(
             subscription.id,
             subscription.customer.toString(),
-            event.type === 'customer.subscription-created'
+            event.type === 'customer.subscription.created'
           );
           break;
         case 'checkout.session.completed':

@@ -56,6 +56,31 @@ export interface Database {
           }
         ];
       };
+      liked_navidrome_tracks: {
+        Row: {
+          created_at: string | null;
+          navidrome_track_id: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string | null;
+          navidrome_track_id: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string | null;
+          navidrome_track_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'liked_navidrome_tracks_user_id_fkey';
+            columns: ['user_id'];
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
       prices: {
         Row: {
           active: boolean | null;
@@ -240,23 +265,29 @@ export interface Database {
         Row: {
           avatar_url: string | null;
           billing_address: Json | null;
+          beta_until: string | null;
           full_name: string | null;
           id: string;
           payment_method: Json | null;
+          role: string;
         };
         Insert: {
           avatar_url?: string | null;
           billing_address?: Json | null;
+          beta_until?: string | null;
           full_name?: string | null;
           id: string;
           payment_method?: Json | null;
+          role?: string;
         };
         Update: {
           avatar_url?: string | null;
           billing_address?: Json | null;
+          beta_until?: string | null;
           full_name?: string | null;
           id?: string;
           payment_method?: Json | null;
+          role?: string;
         };
         Relationships: [
           {

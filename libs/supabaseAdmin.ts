@@ -7,10 +7,13 @@ import { Price, Product } from '@/types';
 import { stripe } from './stripe';
 import { toDateTime, validateUuid } from './helpers';
 
-export const supabaseAdmin = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
+// Placeholders allow build to complete when env is not set; use real values in .env.local for runtime
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseServiceKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-role-key';
+
+export const supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
 const upsertProductRecord = async (product: Stripe.Product) => {
   const productData: Product = {

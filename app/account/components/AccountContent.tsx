@@ -41,7 +41,7 @@ export const AccountContent = () => {
     }
   };
   return (
-    <div className="mb-7 px-6">
+    <div className="mb-7 px-4 sm:px-6">
       {!subscription && (
         <div className="flex flex-col gap-y-4">
           <p>No active plan.</p>

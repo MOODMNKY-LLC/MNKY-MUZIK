@@ -14,6 +14,8 @@ import { Price, ProductWithPrice } from '@/types';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { useSubscribeModal } from '@/hooks/useSubscribeModal';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
 interface subscribeModalProps {
   products: ProductWithPrice[];
@@ -30,7 +32,9 @@ const formatPrice = (price: Price) => {
 const SubscribeModal: React.FC<subscribeModalProps> = ({ products }) => {
   const subscribeModal = useSubscribeModal();
   const [priceIdLoading, setPriceIdLoading] = useState<string>();
-  const { user, isLoading, subscription } = useUser();
+  const [betaPin, setBetaPin] = useState('');
+  const [betaLoading, setBetaLoading] = useState(false);
+  const { user, isLoading, subscription, canPlay, role, refetchUserData } = useUser();
 
   const onChange = (open: boolean) => {
     if (!open) {
@@ -67,6 +71,32 @@ const SubscribeModal: React.FC<subscribeModalProps> = ({ products }) => {
     }
   };
 
+  const handleBetaVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!betaPin.trim() || betaLoading) return;
+    setBetaLoading(true);
+    try {
+      const res = await fetch('/api/beta/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: betaPin.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error ?? 'Invalid code');
+        return;
+      }
+      toast.success('Beta access granted');
+      await refetchUserData();
+      subscribeModal.onClose();
+      setBetaPin('');
+    } catch {
+      toast.error('Something went wrong');
+    } finally {
+      setBetaLoading(false);
+    }
+  };
+
   let content = <div className="text-center">No products avaliable</div>;
 
   if (products.length) {
@@ -94,14 +124,47 @@ const SubscribeModal: React.FC<subscribeModalProps> = ({ products }) => {
     content = <div className="text-center">Already subscribed!</div>;
   }
 
+  if (canPlay && !subscription) {
+    content = (
+      <div className="text-center text-sm text-muted-foreground">
+        {role === 'admin' && 'You have full access as an admin.'}
+        {role === 'beta' && 'You have beta access.'}
+      </div>
+    );
+  }
+
   return (
     <Modal
       title="Only for premium users"
-      description="Listen to music with Spotify Premium"
+      description="Subscribe to play music, or enter a beta code"
       isOpen={subscribeModal.isOpen}
       onChange={onChange}
     >
-      {content}
+      <div className="space-y-4">
+        {content}
+        <div className="border-t pt-4">
+          <p className="text-xs text-muted-foreground mb-2">Have a beta code?</p>
+          <form onSubmit={handleBetaVerify} className="flex gap-2">
+            <div className="flex-1 grid gap-1">
+              <Label htmlFor="beta-pin" className="sr-only">
+                Beta code
+              </Label>
+              <Input
+                id="beta-pin"
+                type="text"
+                placeholder="Enter code"
+                value={betaPin}
+                onChange={(e) => setBetaPin(e.target.value)}
+                disabled={betaLoading}
+                className="h-9"
+              />
+            </div>
+            <Button type="submit" disabled={betaLoading || !betaPin.trim()} className="h-9">
+              {betaLoading ? 'Checking...' : 'Apply'}
+            </Button>
+          </form>
+        </div>
+      </div>
     </Modal>
   );
 };

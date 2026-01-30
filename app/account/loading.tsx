@@ -1,8 +1,7 @@
 'use client';
 
 import { Box } from '@/components/Box';
-
-import { Triangle } from 'react-loader-spinner';
+import { Triangle } from '@/components/TriangleLoader';
 
 const Loading = () => {
   return (

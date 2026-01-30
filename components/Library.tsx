@@ -9,7 +9,7 @@ import { useAuthModal } from '@/hooks/useAuthModal';
 import { useUser } from '@/hooks/useUser';
 import { useUploadModal } from '@/hooks/useUploadModal';
 
-import { Song } from '@/types';
+import type { Song, SupabaseTrack } from '@/types';
 import { MediaItem } from './MediaItem';
 
 interface LibraryProps {
@@ -17,21 +17,20 @@ interface LibraryProps {
 }
 
 export const Library: React.FC<LibraryProps> = ({ songs }) => {
-  //* Hooks initialization
   const subscribeModal = useSubscribeModal();
   const authModal = useAuthModal();
   const uploadModal = useUploadModal();
-  const { user, subscription } = useUser();
+  const { user, canPlay } = useUser();
 
-  //* Pass all the songs in the playlist
-  const onPlay = useOnPlay(songs);
+  const tracks: SupabaseTrack[] = songs.map((s) => ({ ...s, source: 'supabase' }));
+  const onPlay = useOnPlay(tracks);
 
   const onClick = () => {
     if (!user) {
       return authModal.onOpen();
     }
 
-    if (!subscription) {
+    if (!canPlay) {
       return subscribeModal.onOpen();
     }
 
@@ -53,7 +52,7 @@ export const Library: React.FC<LibraryProps> = ({ songs }) => {
         />
       </div>
       <div className="flex flex-col gap-y-2 mt-4 px-3">
-        {songs.map((item) => (
+        {tracks.map((item) => (
           <MediaItem onClick={(id: string) => onPlay(id)} key={item.id} data={item} />
         ))}
       </div>

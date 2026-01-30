@@ -6,98 +6,102 @@ import { useRouter } from 'next/navigation';
 
 import { useAuthModal } from '@/hooks/useAuthModal';
 import { useUser } from '@/hooks/useUser';
-
-import { useSessionContext } from '@supabase/auth-helpers-react';
+import { useSupabaseClient } from '@/providers/SupabaseProvider';
 import { AiFillHeart, AiOutlineHeart } from 'react-icons/ai';
 import { toast } from 'react-hot-toast';
 
+import type { Track } from '@/types';
+import { isSupabaseTrack } from '@/types';
+import { toggleLikedNavidromeTrack } from '@/actions/toggleLikedNavidromeTrack';
+
 interface LikeButtonProps {
-  songId: string;
+  track: Track;
 }
 
-export const LikeButton: React.FC<LikeButtonProps> = ({ songId }) => {
+export const LikeButton: React.FC<LikeButtonProps> = ({ track }) => {
   const router = useRouter();
-  const { supabaseClient } = useSessionContext();
-
+  const supabaseClient = useSupabaseClient();
   const authModal = useAuthModal();
   const { user } = useUser();
 
   const [isLiked, setIsLiked] = useState(false);
 
-  //* Check if song is liked or not
+  const isSupabase = isSupabaseTrack(track);
+  const songId = isSupabase ? track.id : null;
+  const navidromeTrackId = !isSupabase ? track.id : null;
+
   useEffect(() => {
-    if (!user?.id) {
+    if (!user?.id) return;
+
+    if (isSupabase) {
+      if (!songId || songId === 'undefined') return;
+      const fetchData = async () => {
+        const { data, error } = await supabaseClient
+          .from('liked_songs')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('song_id', Number(songId))
+          .single();
+        if (!error && data) setIsLiked(true);
+      };
+      fetchData();
       return;
     }
 
-    // Make sure we have valid IDs
-    if (!songId || songId === 'undefined') {
-      console.error('Invalid song ID');
-      return;
-    }
-
+    if (!navidromeTrackId) return;
     const fetchData = async () => {
-      //* Find song in liked_songs table
-      const { data, error } = await supabaseClient
-        .from('liked_songs')
-        .select('*')
+      const { data } = await supabaseClient
+        .from('liked_navidrome_tracks')
+        .select('user_id')
         .eq('user_id', user.id)
-        .eq('song_id', songId)
-        .single();
-
-      if (!error && data) {
-        setIsLiked(true);
-      }
+        .eq('navidrome_track_id', navidromeTrackId)
+        .maybeSingle();
+      if (data) setIsLiked(true);
     };
-
     fetchData();
-  }, [songId, supabaseClient, user?.id]);
+  }, [songId, navidromeTrackId, isSupabase, supabaseClient, user?.id]);
 
-  //* Dynamically render icon if the song is liked or not
   const Icon = isLiked ? AiFillHeart : AiOutlineHeart;
 
   const handleLike = async () => {
-    if (!user) {
-      return authModal.onOpen();
-    }
-
-    // Validate user ID and song ID
+    if (!user) return authModal.onOpen();
     if (!user.id || user.id === 'undefined') {
       toast.error('User ID is invalid');
       return;
     }
 
-    if (!songId || songId === 'undefined') {
-      toast.error('Song ID is invalid');
-      return;
-    }
-
-    if (isLiked) {
-      const { error } = await supabaseClient
-        .from('liked_songs')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('song_id', songId);
-
-      if (error) {
-        toast.error(error.message);
+    if (isSupabase) {
+      if (!songId || songId === 'undefined') {
+        toast.error('Song ID is invalid');
+        return;
+      }
+      if (isLiked) {
+        const { error } = await supabaseClient
+          .from('liked_songs')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('song_id', Number(songId));
+        if (error) toast.error(error.message);
+        else setIsLiked(false);
       } else {
-        setIsLiked(false);
+        const { error } = await supabaseClient
+          .from('liked_songs')
+          .insert({ song_id: Number(songId), user_id: user.id });
+        if (error) toast.error(error.message);
+        else {
+          setIsLiked(true);
+          toast.success('Liked!');
+        }
       }
     } else {
-      const { error } = await supabaseClient.from('liked_songs').insert({
-        song_id: songId,
-        user_id: user.id,
-      });
-
-      if (error) {
-        toast.error(error.message);
-      } else {
-        setIsLiked(true);
-        toast.success('Liked!');
+      if (!navidromeTrackId) return;
+      const result = await toggleLikedNavidromeTrack(navidromeTrackId);
+      if (result.error) toast.error(result.error);
+      else {
+        setIsLiked(result.liked ?? false);
+        toast.success(result.liked ? 'Liked!' : 'Removed from liked');
       }
     }
-
     router.refresh();
   };
 

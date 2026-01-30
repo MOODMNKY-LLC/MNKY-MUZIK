@@ -42,9 +42,34 @@ Explore this extensive tutorial to develop a complete Spotify clone from scratch
 
 - **Cancelling Stripe Subscriptions**: Learn how to cancel Stripe subscriptions within the application.
 
+## Getting Started
+
+This project uses **pnpm**. Install dependencies and run the dev server:
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Other commands: `pnpm build`, `pnpm start`, `pnpm lint`.
+
+### Stripe subscription setup
+
+1. Add Stripe keys to `.env.local` (from [Stripe Dashboard](https://dashboard.stripe.com/apikeys)).
+2. Run the one-time setup to create the Premium product and a recurring monthly price (and optionally sync to Supabase):
+
+   ```bash
+   pnpm run stripe:setup
+   ```
+
+3. Register the webhook in Stripe: **Developers → Webhooks → Add endpoint**
+   - **URL:** `https://your-domain.com/api/webhooks` (or for local testing use [Stripe CLI](https://stripe.com/docs/stripe-cli): `stripe listen --forward-to localhost:3000/api/webhooks`)
+   - **Events:** `product.created`, `product.updated`, `price.created`, `price.updated`, `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`
+   - Copy the signing secret into `.env.local` as `STRIPE_WEBHOOK_SECRET`.
+
 ## Built With
 
-- Next.js 13.4
+- Next.js 15
 - React
 - Tailwind CSS
 - Supabase

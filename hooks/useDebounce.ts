@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 //* Custom hook to implement a debounce feature for any value type.
-export default function useDebounce<T>(value: T, delay?: number): T {
+export function useDebounce<T>(value: T, delay?: number): T {
   const [debounceValue, setDebounceValue] = useState<T>(value);
 
   //* Run the effect after every render when the 'value' or 'delay' changes.
@@ -19,3 +19,5 @@ export default function useDebounce<T>(value: T, delay?: number): T {
   //* Returning the debounced value.
   return debounceValue;
 }
+
+export default useDebounce;

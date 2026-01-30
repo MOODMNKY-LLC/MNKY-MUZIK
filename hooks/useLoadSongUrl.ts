@@ -1,5 +1,5 @@
 import { Song } from '@/types';
-import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import { useSupabaseClient } from '@/providers/SupabaseProvider';
 
 export const useLoadSongUrl = (song: Song) => {
   const supabaseClient = useSupabaseClient();

@@ -10,6 +10,8 @@ import { SupabaseProvider } from '@/providers/SupabaseProvider';
 import { UserProvider } from '@/providers/UserProvider';
 import { ModalProvider } from '@/providers/ModalProvider';
 import { ToasterProvider } from '@/providers/ToasterProvider';
+import { PWAProvider } from '@/providers/PWAProvider';
+import { PWAInstallBanner } from '@/components/PWAInstallBanner';
 
 import { getSongsByUserId } from '@/actions/getSongsByUserId';
 import { Player } from '@/components/Player';
@@ -19,8 +21,18 @@ const font = Figtree({ subsets: ['latin'] });
 
 //* Describe the web app
 export const metadata = {
-  title: 'Spotify Clone',
-  description: 'Listen to music!',
+  title: 'MNKY MUZIK',
+  description: 'Scents the mood.',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+  },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover' as const,
 };
 
 export const revalidate = 0;
@@ -32,22 +44,27 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   //* Providers & Components
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" sizes="180x180" href="../images/apple-touch-icon.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="../images/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="../images/favicon-16x16.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="manifest" href="/site.webmanifest" />
+        <meta name="theme-color" content="#10b981" />
       </head>
       <body className={font.className}>
         <ToasterProvider />
-        <SupabaseProvider>
-          <UserProvider>
-            <ModalProvider products={products} />
-            <Sidebar songs={userSongs}>{children}</Sidebar>
-            <Player />
-          </UserProvider>
-        </SupabaseProvider>
+        <PWAProvider>
+          <SupabaseProvider>
+            <UserProvider>
+              <ModalProvider products={products} />
+              <Sidebar songs={userSongs}>{children}</Sidebar>
+              <Player />
+            </UserProvider>
+          </SupabaseProvider>
+          <PWAInstallBanner />
+        </PWAProvider>
         <Analytics />
       </body>
     </html>

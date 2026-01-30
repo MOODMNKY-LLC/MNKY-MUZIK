@@ -1,6 +1,8 @@
 'use client';
 
 import { twMerge } from 'tailwind-merge';
+import Image from 'next/image';
+import Link from 'next/link';
 
 import { usePathname } from 'next/navigation';
 
@@ -9,6 +11,7 @@ import { usePlayer } from '@/hooks/usePlayer';
 import { useMemo } from 'react';
 import { HiHome } from 'react-icons/hi';
 import { BiSearch } from 'react-icons/bi';
+import { MdPlaylistPlay, MdRequestQuote } from 'react-icons/md';
 
 import { Box } from './Box';
 import { SidebarItem } from './SidebarItem';
@@ -35,17 +38,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ children, songs }) => {
       {
         icon: HiHome,
         label: 'Home',
-        active: pathname !== '/search',
+        active: pathname === '/',
         href: '/',
       },
       {
         icon: BiSearch,
         label: 'Search',
-        active: pathname === 'search',
+        active: pathname === '/search',
         href: '/search',
       },
+      {
+        icon: MdPlaylistPlay,
+        label: 'Playlists',
+        active: pathname?.startsWith('/playlist'),
+        href: '/playlists',
+      },
+      {
+        icon: MdRequestQuote,
+        label: 'Request',
+        active: pathname === '/request',
+        href: '/request',
+      },
     ],
-    []
+    [pathname]
   );
 
   return (
@@ -55,6 +70,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ children, songs }) => {
         `
         flex
         h-full
+        min-h-0
         `,
         player.activeId && 'h-[calc(100%-80px)]'
       )}
@@ -62,6 +78,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ children, songs }) => {
       <div className="hidden md:flex flex-col gap-y-2 bg-black h-full w-[300px] p-2">
         <Box>
           <div className="flex flex-col gap-y-4 px-5 py-4">
+            <Link href="/" className="flex items-center gap-x-2 mb-2" aria-label="MNKY MUZIK Home">
+              <Image
+                src="/images/mnky-muzik-app-icon.png"
+                alt=""
+                width={40}
+                height={40}
+                className="object-contain"
+              />
+            </Link>
             {routes.map((item) => (
               <SidebarItem key={item.label} {...item} />
             ))}
@@ -71,7 +96,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ children, songs }) => {
           <Library songs={songs} />
         </Box>
       </div>
-      <main className="h-full flex-1 overflow-y-auto py-2">{children}</main>
+      <main className="h-full min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-2 pb-player-safe">{children}</main>
     </div>
   );
 };

@@ -1,19 +1,17 @@
 'use client';
 
-import { useGetSongById } from '@/hooks/useGetSongById';
-import { useLoadSongUrl } from '@/hooks/useLoadSongUrl';
+import { useGetTrackById } from '@/hooks/useGetTrackById';
+import { useLoadTrackUrl } from '@/hooks/useLoadTrackUrl';
 import { usePlayer } from '@/hooks/usePlayer';
 
 import { PlayerContent } from './PlayerContent';
 
 export const Player = () => {
   const player = usePlayer();
-  const { song } = useGetSongById(player.activeId);
+  const { track } = useGetTrackById(player.activeId);
+  const songUrl = useLoadTrackUrl(track);
 
-  const songUrl = useLoadSongUrl(song!);
-
-  //* Don't load player if you dont have the song, url or id
-  if (!song || !songUrl || !player.activeId) {
+  if (!track || !songUrl || !player.activeId) {
     return null;
   }
 
@@ -22,15 +20,17 @@ export const Player = () => {
       className="
         fixed
         bottom-0
+        left-0
+        right-0
         bg-black
         w-full
         py-2
-        h-[80px]
         px-4
+        min-h-[80px]
+        pb-[env(safe-area-inset-bottom,0px)]
         "
     >
-      {/* //! Using the `key` attribute on this component to destory it and re-load to the new songUrl */}
-      <PlayerContent key={songUrl} song={song} songUrl={songUrl} />
+      <PlayerContent key={songUrl} track={track} songUrl={songUrl} />
     </div>
   );
 };

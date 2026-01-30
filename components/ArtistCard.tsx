@@ -1,0 +1,56 @@
+'use client';
+
+import { CoverImage } from '@/components/CoverImage';
+import Link from 'next/link';
+import type { NavidromeArtistSummary } from '@/actions/getNavidromeBrowse';
+
+interface ArtistCardProps {
+  artist: NavidromeArtistSummary;
+}
+
+function coverImageUrl(coverArt?: string): string | null {
+  if (!coverArt) return null;
+  return `/api/navidrome/cover?id=${encodeURIComponent(coverArt)}`;
+}
+
+export function ArtistCard({ artist }: ArtistCardProps) {
+  const src = coverImageUrl(artist.coverArt);
+
+  return (
+    <Link href={`/artist/${encodeURIComponent(artist.id)}`}>
+      <div
+        className="
+          relative
+          group
+          flex
+          flex-col
+          items-center
+          justify-center
+          overflow-hidden
+          gap-x-4
+          bg-neutral-400/5
+          cursor-pointer
+          hover:bg-neutral-400/10
+          transition
+          p-3
+          rounded-lg
+        "
+      >
+        <div className="relative aspect-square w-full rounded-full overflow-hidden">
+          <CoverImage
+            loading="lazy"
+            className="object-cover"
+            src={src || '/images/liked.png'}
+            fill
+            alt={artist.name}
+            sizes="(max-width: 768px) 50vw, 25vw"
+          />
+        </div>
+        <div className="flex flex-col items-start w-full pt-4 gap-y-1">
+          <p className="font-semibold truncate w-full">{artist.name}</p>
+          <p className="text-neutral-400 text-sm pb-4 w-full truncate">Artist</p>
+        </div>
+      </div>
+    </Link>
+  );
+}

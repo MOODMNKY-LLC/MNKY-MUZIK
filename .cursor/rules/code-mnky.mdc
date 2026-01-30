@@ -1,0 +1,81 @@
+---
+description: Standardized development guidelines for CODE MNKY's full-stack applications, emphasizing AI integration, workflow automation, and security best practices.
+globs: "**/*.ts, **/*.tsx, **/*.js, **/*.json, **/*.md, **/*.env, **/n8n/*.json"
+alwaysApply: true
+---
+---
+description: Standardized development guidelines for CODE MNKY's full-stack applications, emphasizing AI integration, workflow automation, and security best practices.
+globs: "**/*.ts, **/*.tsx, **/*.js, **/*.json, **/*.md, **/*.env, **/n8n/*.json"
+---
+
+# CODE MNKY Development Standards
+
+## **1️⃣ General Development Guidelines**
+- **Use TypeScript** (`.ts, .tsx`) to enforce type safety.
+- **Next.js 15 App Router is required**:
+  - Use the **`app/` directory** instead of `pages/` for routing.
+  - Prefer **Server Components** whenever possible for performance.
+  - Implement **Server Actions** (`"use server"`) for secure form submissions and data mutations.
+  - Use **Client Components** (`"use client"`) only for interactive UI elements and event-driven updates.
+- **ShadCN UI is the default UI library**:
+  - Maintain **consistent design** using reusable components.
+  - Utilize **Tailwind CSS** for responsive layouts.
+
+---
+
+## **2️⃣ Supabase Best Practices**
+- **Authentication Handling**:
+  - Always use **`@supabase/ssr`** for secure authentication.
+  - Implement **session refreshing in middleware** (`updateSession` function).
+- **Database Queries**:
+  - **Use pagination** (`.range(0, 10)`) instead of fetching full datasets.
+  - **Apply Row Level Security (RLS)** to enforce data protection.
+- **`use server` vs. `use client` with Supabase**:
+  - Use **`use server`** when fetching **secure** or **large datasets** (`app/api` route handlers).
+  - Use **`use client`** only for real-time updates and event-driven API calls (`onClick` handlers).
+- **Edge Functions**:
+  - Use the `serve` method for structured execution.
+  - **Environment variables (`Deno.env.get()`) must be secured**.
+
+---
+
+## **3️⃣ API & External Services**
+- **Bungie API**:
+  - Implement **OAuth authentication**.
+  - Cache API responses for performance.
+- **Notion API**:
+  - **Use environment variables (`.env.local`) for API tokens**.
+  - Fetch pages with `GET /v1/pages/{page_id}` and enable caching.
+- **Shopify API**:
+  - Use **GraphQL instead of REST** for efficiency.
+
+---
+
+## **4️⃣ AI & Automation**
+- **Ollama (Preferred Local AI Framework)**:
+  - **Run LLMs locally** for privacy-focused AI applications.
+  - Utilize **Ollama’s Modelfile system** for fine-tuned custom AI models.
+- **OpenAI (Remote AI Processing)**:
+  - Use **`gpt-4o` as the default model**.
+  - Optimize AI prompts to **limit token usage (`max_tokens: 1024`)**.
+- **LangChain**:
+  - Build **modular AI workflows** to manage **complex queries** and **multi-step logic**.
+- **Flowise AI**:
+  - Configure **custom nodes** for AI-driven recommendations and decision-making.
+- **n8n Workflows**:
+  - Store API credentials in **n8n’s built-in credentials storage**.
+  - Use **Webhook Triggers** for real-time updates.
+
+---
+
+## **5️⃣ Security & DevOps**
+- **Docker Best Practices**:
+  - Use **Alpine-based images** (`node:alpine`) for smaller, secure containers.
+  - Reduce **unnecessary layers** in the `Dockerfile`.
+- **Proxmox**:
+  - Deploy **High Availability (HA)** clusters for critical infrastructure.
+  - Monitor logs using `journalctl -xe`.
+
+---
+
+## **6️⃣ Project Structure**

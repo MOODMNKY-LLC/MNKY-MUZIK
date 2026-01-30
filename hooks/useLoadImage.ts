@@ -1,16 +1,20 @@
-import { Song } from '@/types';
+import type { Track } from '@/types';
+import { useSupabaseClient } from '@/providers/SupabaseProvider';
+import { isSupabaseTrack } from '@/types';
 
-import { useSupabaseClient } from '@supabase/auth-helpers-react';
-import { supabase } from '@supabase/auth-ui-shared';
-
-export const useLoadImage = (song: Song) => {
+/**
+ * Returns image URL for a track (Supabase images bucket or Navidrome cover proxy).
+ */
+export function useLoadImage(track: Track | null | undefined): string | null {
   const supabaseClient = useSupabaseClient();
 
-  if (!song) {
-    return null;
+  if (!track) return null;
+
+  if (isSupabaseTrack(track)) {
+    const { data } = supabaseClient.storage.from('images').getPublicUrl(track.image_path);
+    return data.publicUrl;
   }
 
-  const { data: imageData } = supabaseClient.storage.from('images').getPublicUrl(song.image_path);
-
-  return imageData.publicUrl;
-};
+  if (!track.coverArt) return null;
+  return `/api/navidrome/cover?id=${encodeURIComponent(track.coverArt)}`;
+}

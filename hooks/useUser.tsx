@@ -1,42 +1,57 @@
-import { User } from '@supabase/auth-helpers-nextjs';
-import { useSessionContext, useUser as useSupaUser } from '@supabase/auth-helpers-react';
-import { UserDetails, Subscription } from '@/types';
-import { useState, createContext, useEffect, useContext } from 'react';
+import type { User } from '@supabase/supabase-js';
+import { useState, createContext, useEffect, useContext, useMemo } from 'react';
 
-//* Define a type for the user context
+import { useSupabaseClient } from '@/providers/SupabaseProvider';
+import type { UserDetails, UserRole, Subscription } from '@/types';
+
 type UserContextType = {
   accessToken: string | null;
   user: User | null;
   userDetails: UserDetails | null;
   isLoading: boolean;
   subscription: Subscription | null;
+  role: UserRole | null;
+  canPlay: boolean;
+  refetchUserData: () => Promise<void>;
 };
 
-//* Create a user context with the above type
 export const UserContext = createContext<UserContextType | undefined>(undefined);
 
-//* Define a interface for component props
 export interface Props {
-  [propName: string]: any;
+  [propName: string]: unknown;
 }
 
-//* Define a user context provider component
 export const MyUserContextProvider = (props: Props) => {
-  //* Use the session context hook to get the session and loading status
-  const { session, isLoading: isLoadingUser, supabaseClient: supabase } = useSessionContext();
+  const supabase = useSupabaseClient();
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<{ access_token?: string } | null>(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
 
-  //* Use the Supabase user hook to get the user
-  const user = useSupaUser();
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      setUser(s?.user ?? null);
+      setIsLoadingUser(false);
+    });
 
-  //* Get the access token from the session, or null if it doesn't exist
+    const {
+      data: { subscription: sub },
+    } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      setUser(s?.user ?? null);
+    });
+
+    return () => {
+      sub.unsubscribe();
+    };
+  }, [supabase]);
+
   const accessToken = session?.access_token ?? null;
 
-  //* Create a state for loading data, user details, and subscription
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
 
-  //* Define functions to get user details and subscription from Supabase
   const getUserDetails = () => supabase.from('users').select('*').single();
   const getSubscription = () =>
     supabase
@@ -45,28 +60,21 @@ export const MyUserContextProvider = (props: Props) => {
       .in('status', ['trialing', 'active'])
       .single();
 
-  //* Fetch user info
   useEffect(() => {
-    //* If user exists and data is not loading, fetch data
     if (user && !isLoadingData && !userDetails && !subscription) {
       setIsLoadingData(true);
 
-      //* Use Promise.allSettled to fetch user details and subscription
       Promise.allSettled([getUserDetails(), getSubscription()]).then(
         ([userDetailsPromise, subscriptionPromise]) => {
-          //* If the user details promise is fulfilled, set the user details state
           if (userDetailsPromise.status === 'fulfilled') {
-            setUserDetails(userDetailsPromise.value?.data as UserDetails);
+            setUserDetails(userDetailsPromise.value?.data as unknown as UserDetails);
           } else {
-            //! Log an error if the promise for details is rejected
             console.error(userDetailsPromise.reason);
           }
 
-          //* If the subscription promise is fulfilled, set the subscription state
           if (subscriptionPromise.status === 'fulfilled') {
-            setSubscription(subscriptionPromise.value?.data as Subscription);
+            setSubscription(subscriptionPromise.value?.data as unknown as Subscription);
           } else {
-            //! Log an error if the promise for subscriptions is rejected
             console.error(subscriptionPromise.reason);
           }
 
@@ -74,19 +82,50 @@ export const MyUserContextProvider = (props: Props) => {
         }
       );
     } else if (!user && !isLoadingUser && !isLoadingData) {
-      //* If user does not exist and data is not loading, reset user details and subscription
       setUserDetails(null);
       setSubscription(null);
     }
-  }, [user, isLoadingUser]); //* Run effect when user or loading user state changes
+  }, [user, isLoadingUser]);
 
-  //* Define the value to pass to the user context
+  const refetchUserData = async () => {
+    if (!user) return;
+    setIsLoadingData(true);
+    const [userDetailsPromise, subscriptionPromise] = await Promise.allSettled([
+      getUserDetails(),
+      getSubscription(),
+    ]);
+    if (userDetailsPromise.status === 'fulfilled') {
+      setUserDetails(userDetailsPromise.value?.data as unknown as UserDetails);
+    }
+    if (subscriptionPromise.status === 'fulfilled') {
+      setSubscription(subscriptionPromise.value?.data as unknown as Subscription);
+    }
+    setIsLoadingData(false);
+  };
+
+  const role = (userDetails?.role as UserRole) ?? null;
+  const canPlay = useMemo(() => {
+    if (!user) return false;
+    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_DEV_BYPASS_SUBSCRIPTION === 'true') return true;
+    if (subscription) return true;
+    if (role === 'admin') return true;
+    if (role === 'beta') {
+      const until = userDetails?.beta_until;
+      if (!until) return true;
+      return new Date(until) > new Date();
+    }
+    return false;
+  }, [user, subscription, role, userDetails?.beta_until]);
+
   const value = {
     accessToken,
     user,
     userDetails,
     isLoading: isLoadingUser || isLoadingData,
     subscription,
+    role,
+    canPlay,
+    refetchUserData,
   };
 
   return <UserContext.Provider value={value} {...props} />;

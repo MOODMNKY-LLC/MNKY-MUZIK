@@ -30,7 +30,9 @@ export const SidebarItem: React.FC<SidebarItemProps> = ({ icon: Icon, label, act
         hover:text-white
         transition
         text-neutral-400
-        py-1
+        py-2
+        min-h-[44px]
+        items-center
         `,
         active && 'text-white'
       )}

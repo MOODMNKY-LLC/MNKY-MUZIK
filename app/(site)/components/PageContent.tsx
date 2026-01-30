@@ -2,16 +2,17 @@
 
 import { SongItem } from '@/components/SongItem';
 import { useOnPlay } from '@/hooks/useOnPlay';
-import { Song } from '@/types';
+import type { Song, SupabaseTrack } from '@/types';
 
 interface PageContentProps {
   songs: Song[];
 }
 
 export const PageContent: React.FC<PageContentProps> = ({ songs }) => {
-  const onPlay = useOnPlay(songs);
+  const tracks: SupabaseTrack[] = songs.map((s) => ({ ...s, source: 'supabase' }));
+  const onPlay = useOnPlay(tracks);
 
-  if (songs.length === 0) {
+  if (tracks.length === 0) {
     return <div className="mt-4 text-neutral-400">No songs available</div>;
   }
 
@@ -29,7 +30,7 @@ export const PageContent: React.FC<PageContentProps> = ({ songs }) => {
         mt-4
         "
     >
-      {songs.map((item) => (
+      {tracks.map((item) => (
         <SongItem key={item.id} onClick={(id: string) => onPlay(id)} data={item} />
       ))}
     </div>

@@ -1,27 +1,29 @@
 'use client';
 
-import Image from 'next/image';
-
+import { CoverImage } from '@/components/CoverImage';
 import { useLoadImage } from '@/hooks/useLoadImage';
 
-import { Song } from '@/types';
+import type { Track } from '@/types';
+import { isSupabaseTrack } from '@/types';
+import { NAVIDROME_ID_PREFIX } from '@/types';
 
 import { usePlayer } from '@/hooks/usePlayer';
 
 interface MediaItemProps {
-  data: Song;
+  data: Track;
   onClick?: (id: string) => void;
 }
 
 export const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
   const player = usePlayer();
   const imageUrl = useLoadImage(data);
+  const author = isSupabaseTrack(data) ? data.author : (data.artist ?? '');
+  const playId = isSupabaseTrack(data) ? data.id : NAVIDROME_ID_PREFIX + data.id;
   const handleClick = () => {
     if (onClick) {
-      return onClick(data.id);
+      return onClick(playId);
     }
-
-    return player.setId(data.id);
+    return player.setId(playId);
   };
   return (
     <div
@@ -46,7 +48,7 @@ export const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
             overflow-hidden
             "
       >
-        <Image
+        <CoverImage
           fill
           src={imageUrl || '/images/liked.png'}
           alt="Media Item"
@@ -62,7 +64,7 @@ export const MediaItem: React.FC<MediaItemProps> = ({ data, onClick }) => {
             "
       >
         <p className="text-white truncate">{data.title}</p>
-        <p className="text-neutral-400 text-sm truncate">{data.author}</p>
+        <p className="text-neutral-400 text-sm truncate">{author}</p>
       </div>
     </div>
   );

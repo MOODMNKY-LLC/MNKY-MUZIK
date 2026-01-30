@@ -1,23 +1,24 @@
 'use client';
 
 import { useEffect } from 'react';
-
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
-import { Song } from '@/types';
+import type { Track } from '@/types';
+import { isSupabaseTrack, NAVIDROME_ID_PREFIX } from '@/types';
 import { useUser } from '@/hooks/useUser';
 import { MediaItem } from '@/components/MediaItem';
 import { LikeButton } from '@/components/LikeButton';
 import { useOnPlay } from '@/hooks/useOnPlay';
 
 interface LikedContentProps {
-  songs: Song[];
+  tracks: Track[];
 }
 
-export const LikedContent: React.FC<LikedContentProps> = ({ songs }) => {
+export const LikedContent: React.FC<LikedContentProps> = ({ tracks }) => {
   const router = useRouter();
   const { isLoading, user } = useUser();
-  const onPlay = useOnPlay(songs);
+  const onPlay = useOnPlay(tracks);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -25,33 +26,34 @@ export const LikedContent: React.FC<LikedContentProps> = ({ songs }) => {
     }
   }, [isLoading, user, router]);
 
-  if (songs.length === 0) {
+  if (tracks.length === 0) {
     return (
-      <div
-        className="
-            flex
-            flex-col
-            gap-y-2
-            w-full
-            px-6
-            text-neutral-400
-            "
-      >
-        No Liked songs.
+      <div className="flex flex-col items-center gap-y-4 w-full px-4 sm:px-6 py-8 text-neutral-400">
+        <Image
+          src="/images/mnky-muzik-app-icon.png"
+          alt=""
+          width={48}
+          height={48}
+          className="object-contain opacity-80"
+        />
+        <p>No liked songs.</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-y-2 w-full p-6">
-      {songs.map((song) => (
-        <div key={song.id} className="flex items-center gap-x-4 w-full">
-          <div className="flex-1">
-            <MediaItem onClick={(id: string) => onPlay(id)} data={song} />
+    <div className="flex flex-col gap-y-2 w-full p-4 sm:p-6">
+      {tracks.map((track) => {
+        const key = isSupabaseTrack(track) ? track.id : NAVIDROME_ID_PREFIX + track.id;
+        return (
+          <div key={key} className="flex items-center gap-x-4 w-full">
+            <div className="flex-1">
+              <MediaItem onClick={(id: string) => onPlay(id)} data={track} />
+            </div>
+            <LikeButton track={track} />
           </div>
-          <LikeButton songId={song.id} />
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
