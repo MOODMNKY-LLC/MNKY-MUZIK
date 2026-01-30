@@ -4,8 +4,6 @@ import './globals.css';
 
 import { Analytics } from '@vercel/analytics/react';
 
-import { Figtree } from 'next/font/google';
-
 import { SupabaseProvider } from '@/providers/SupabaseProvider';
 import { UserProvider } from '@/providers/UserProvider';
 import { ModalProvider } from '@/providers/ModalProvider';
@@ -16,8 +14,6 @@ import { PWAInstallBanner } from '@/components/PWAInstallBanner';
 import { getSongsByUserId } from '@/actions/getSongsByUserId';
 import { Player } from '@/components/Player';
 import { getActiveProductsWithPrices } from '@/actions/getActiveProductsWithPrices';
-
-const font = Figtree({ subsets: ['latin'] });
 
 //* Describe the web app
 export const metadata = {
@@ -46,6 +42,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className="dark">
       <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Figtree:wght@300..900&display=swap"
+        />
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -53,7 +53,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="manifest" href="/site.webmanifest" />
         <meta name="theme-color" content="#10b981" />
       </head>
-      <body className={font.className}>
+      <body className="font-figtree">
         <ToasterProvider />
         <PWAProvider>
           <SupabaseProvider>

@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Figtree loaded via link in layout (no build-time fetch) */
+.font-figtree {
+  font-family: 'Figtree', sans-serif;
+}
+
 html, body, :root {
   height: 100%;
   overflow: hidden;
