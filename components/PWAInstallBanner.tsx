@@ -9,11 +9,13 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 const BANNER_DISMISSED_KEY = 'pwa-install-banner-dismissed';
+const FALLBACK_DELAY_MS = 8000; // Show fallback banner after 8s if beforeinstallprompt never fired
 
 export function PWAInstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -27,6 +29,9 @@ export function PWAInstallBanner() {
       return;
     }
 
+    const isApple = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    setIsIOS(isApple);
+
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -34,15 +39,26 @@ export function PWAInstallBanner() {
     };
 
     window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+
+    // Fallback: show banner after delay so users see install option even if heuristics haven't fired
+    const fallbackTimer = setTimeout(() => setShowBanner(true), FALLBACK_DELAY_MS);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      clearTimeout(fallbackTimer);
+    };
   }, []);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
-    await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') setShowBanner(false);
-    setDeferredPrompt(null);
+    if (deferredPrompt) {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') setShowBanner(false);
+      setDeferredPrompt(null);
+    } else if (isIOS) {
+      handleDismiss();
+      // iOS: user must use Share → Add to Home Screen; we can't trigger it
+    }
   };
 
   const handleDismiss = () => {
@@ -73,13 +89,18 @@ export function PWAInstallBanner() {
           <p className="text-sm text-neutral-400">Add to your home screen for a better experience.</p>
         </div>
       </div>
+      {isIOS && (
+        <p className="mt-2 text-xs text-neutral-500">
+          Tap Share, then &quot;Add to Home Screen&quot;
+        </p>
+      )}
       <div className="mt-4 flex gap-2">
         <button
           type="button"
           onClick={handleInstall}
           className="flex-1 rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-black hover:bg-emerald-400"
         >
-          Install
+          {deferredPrompt ? 'Install' : isIOS ? 'Got it' : 'Install'}
         </button>
         <button
           type="button"
