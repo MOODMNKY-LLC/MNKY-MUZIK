@@ -43,9 +43,15 @@ export async function GET(request: Request) {
             return cookieStore.getAll()
           },
           setAll(cookiesToSet: { name: string; value: string; options?: unknown }[]) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              redirectRes.cookies.set(name, value, options as Parameters<typeof redirectRes.cookies.set>[2])
-            )
+            const isSecure = base.startsWith('https')
+            cookiesToSet.forEach(({ name, value, options }) => {
+              const opts = {
+                ...(typeof options === 'object' && options !== null ? (options as Record<string, unknown>) : {}),
+                sameSite: 'lax' as const,
+                ...(isSecure && { secure: true }),
+              }
+              redirectRes.cookies.set(name, value, opts as Parameters<typeof redirectRes.cookies.set>[2])
+            })
           },
         },
       }
@@ -60,8 +66,8 @@ export async function GET(request: Request) {
             s.provider_token,
             s.provider_refresh_token
           )
-        } catch {
-          // Non-fatal
+        } catch (err) {
+          console.error('[auth/callback] Failed to save Spotify tokens to DB:', (err as Error)?.message ?? err)
         }
       }
       return redirectRes

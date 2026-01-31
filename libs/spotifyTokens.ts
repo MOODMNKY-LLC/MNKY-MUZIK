@@ -54,12 +54,12 @@ export async function getSpotifyTokensForCurrentUser(): Promise<{
   const { data: { session } } = await supabase.auth.getSession();
   const s = session as { provider_token?: string; provider_refresh_token?: string } | null;
 
-  // Try DB first
+  // Try DB first (maybeSingle so 0 rows returns null instead of 406 in production)
   const { data: row } = await supabase
     .from('user_spotify_tokens')
     .select('access_token, refresh_token')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
   if (row?.access_token && row?.refresh_token) {
     return {

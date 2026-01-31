@@ -46,3 +46,18 @@ If user-scoped Spotify features (playlists, saved tracks, recommendations) stop 
 - The app shows "Your Spotify session expired. Reconnect Spotify" and a link to sign in again.
 - Ensure `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` are set (needed for token refresh).
 - See [Spotify: Refreshing tokens](https://developer.spotify.com/documentation/web-api/tutorials/refreshing-tokens).
+
+## Production: "From Spotify" / session persistence
+
+In production, the "From Spotify" section (playlists, saved tracks, recommendations) can fail to show even after a successful Spotify sign-in. Common causes:
+
+1. **Cookie options**: The OAuth callback sets session cookies on the redirect response. In production (HTTPS), cookies must have `SameSite=Lax` (so they are set when the user lands from the Spotify redirect) and `Secure: true`. The callback applies these when the redirect URL is HTTPS.
+
+2. **Token persistence**: Supabase refreshes the session on page loads (via the proxy’s `updateSession`), which clears `provider_token`. The app persists Spotify tokens in `user_spotify_tokens` during the callback so API routes can still use them. Ensure:
+   - The `user_spotify_tokens` migration has been applied in your production Supabase project.
+   - RLS allows the authenticated user to insert/update their own row (policy uses `auth.uid() = user_id`).
+   - If the callback fails to save tokens, check server logs for `[auth/callback] Failed to save Spotify tokens to DB`.
+
+3. **Redirect URLs**: In Supabase Dashboard → Auth → URL Configuration, add your production callback under Redirect URLs (e.g. `https://your-domain.com/auth/callback`). The Site URL should match your production origin.
+
+4. **API routes and cookies**: The client calls `/api/spotify/user/linked` with `credentials: 'include'` so cookies are sent. If "From Spotify" is empty in production, confirm the session cookie is present and sent on same-origin API requests (e.g. in DevTools → Application → Cookies).

@@ -7,10 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   const tokens = await getSpotifyTokensForCurrentUser();
   if (!tokens) {
-    return NextResponse.json(
-      { error: 'Sign in with Spotify to view your playlists' },
-      { status: 401 }
-    );
+    return NextResponse.json({ items: [], total: 0 });
   }
 
   const { searchParams } = new URL(request.url);
