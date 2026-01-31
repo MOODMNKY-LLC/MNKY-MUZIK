@@ -1,13 +1,21 @@
 import { getSiteOrigin } from '@/lib/metadata'
-import { createClient } from '@/lib/supabase/server'
 import { saveSpotifyTokens } from '@/libs/spotifyTokens'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+
+import type { Database } from '@/types_db'
+
+const PLACEHOLDER_URL = 'https://placeholder.supabase.co'
+const PLACEHOLDER_KEY = 'placeholder-key'
 
 /**
  * OAuth callback route. Supabase redirects here with ?code=...&state=...&next=/
  * We run exchangeCodeForSession on this FIRST request (same request that has the
  * flow-state cookies), which fixes flow_state_not_found that occurred when we
  * did a client redirect to /auth/oauth and exchanged on the second request.
+ * Session cookies are written onto the redirect response so the client receives
+ * the session (including provider_token) on the next page load.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -22,7 +30,26 @@ export async function GET(request: Request) {
     (forwardedHost ? `https://${forwardedHost}` : requestOrigin)
 
   if (code) {
-    const supabase = await createClient()
+    const cookieStore = await cookies()
+    const redirectRes = NextResponse.redirect(`${base}${next}`)
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || PLACEHOLDER_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+        PLACEHOLDER_KEY,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet: { name: string; value: string; options?: unknown }[]) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              redirectRes.cookies.set(name, value, options as Parameters<typeof redirectRes.cookies.set>[2])
+            )
+          },
+        },
+      }
+    )
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error && data?.session) {
       const s = data.session as { provider_token?: string; provider_refresh_token?: string }
@@ -37,7 +64,7 @@ export async function GET(request: Request) {
           // Non-fatal
         }
       }
-      return NextResponse.redirect(`${base}${next}`)
+      return redirectRes
     }
     if (error) {
       const errorSearch = new URLSearchParams()
