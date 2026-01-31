@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type { Track } from '@/types';
 
 import { usePlayer } from '@/hooks/usePlayer';
+import { usePlaybackState } from '@/providers/PlaybackStateContext';
 
 import { BsPauseFill, BsPlayFill } from 'react-icons/bs';
 import { AiFillBackward, AiFillStepForward } from 'react-icons/ai';
@@ -13,7 +14,6 @@ import { MdShuffle, MdRepeat, MdRepeatOne, MdQueueMusic, MdFullscreen } from 're
 
 import { MediaItem } from './MediaItem';
 import { LikeButton } from './LikeButton';
-import { NowPlayingExpanded } from './NowPlayingExpanded';
 import { Slider } from './Slider';
 import useSound from 'use-sound';
 
@@ -30,6 +30,7 @@ function formatTime(sec: number): string {
 
 export const PlayerContent: React.FC<PlayerContentProps> = ({ track, songUrl }) => {
   const player = usePlayer();
+  const { setPlaybackState } = usePlaybackState();
   const [volume, setVolume] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -43,7 +44,7 @@ export const PlayerContent: React.FC<PlayerContentProps> = ({ track, songUrl }) 
       ? player.shuffledIds
       : player.ids;
 
-  const onPlayNextSong = () => {
+  const onPlayNextSong = useCallback(() => {
     if (order.length === 0) return;
     const currentIndex = order.indexOf(player.activeId ?? '');
     if (currentIndex < 0) return;
@@ -53,9 +54,9 @@ export const PlayerContent: React.FC<PlayerContentProps> = ({ track, songUrl }) 
       return;
     }
     player.setId(order[nextIndex]);
-  };
+  }, [order, player.activeId, player.repeat, player.setId]);
 
-  const onPlayPreviousSong = () => {
+  const onPlayPreviousSong = useCallback(() => {
     if (order.length === 0) return;
     const currentIndex = order.indexOf(player.activeId ?? '');
     if (currentIndex < 0) return;
@@ -65,7 +66,7 @@ export const PlayerContent: React.FC<PlayerContentProps> = ({ track, songUrl }) 
       return;
     }
     player.setId(order[prevIndex]);
-  };
+  }, [order, player.activeId, player.repeat, player.setId]);
 
   const [play, { pause, sound, duration: durationMs }] = useSound(songUrl, {
     volume: volume,
@@ -121,22 +122,50 @@ export const PlayerContent: React.FC<PlayerContentProps> = ({ track, songUrl }) 
   const durationSec = durationMs != null ? durationMs / 1000 : 0;
   const progress = durationSec > 0 ? currentTime / durationSec : 0;
 
-  const handleProgressChange = (value: number) => {
-    if (!sound || !durationSec) return;
-    const sec = value * durationSec;
-    setCurrentTime(sec);
-    if (typeof (sound as { seek: (s?: number) => number }).seek === 'function') {
-      (sound as { seek: (s: number) => number }).seek(sec);
-    }
-  };
+  const handleProgressChange = useCallback(
+    (value: number) => {
+      if (!sound || !durationSec) return;
+      const sec = value * durationSec;
+      setCurrentTime(sec);
+      if (typeof (sound as { seek: (s?: number) => number }).seek === 'function') {
+        (sound as { seek: (s: number) => number }).seek(sec);
+      }
+    },
+    [sound, durationSec]
+  );
 
-  const handlePlay = () => {
+  const handlePlay = useCallback(() => {
     if (!isPlaying) {
       play();
     } else {
       pause();
     }
-  };
+  }, [isPlaying, play, pause]);
+
+  // Expose playback state to expanded view (PlaybackStateContext)
+  useEffect(() => {
+    setPlaybackState({
+      isPlaying,
+      currentTime,
+      durationSec,
+      progress,
+      onPlayPause: handlePlay,
+      onPrevious: onPlayPreviousSong,
+      onNext: onPlayNextSong,
+      onProgressChange: handleProgressChange,
+      formatTime,
+    });
+  }, [
+    isPlaying,
+    currentTime,
+    durationSec,
+    progress,
+    setPlaybackState,
+    handlePlay,
+    onPlayPreviousSong,
+    onPlayNextSong,
+    handleProgressChange,
+  ]);
 
   const toggleMute = () => {
     if (volume === 0) {
@@ -180,15 +209,15 @@ export const PlayerContent: React.FC<PlayerContentProps> = ({ track, songUrl }) 
         items-center
         "
       >
-        <div className="flex w-full justify-start items-center gap-x-2">
-          <div className="flex items-center gap-x-4">
+        <div className="flex w-full justify-start items-center gap-x-2 min-w-0">
+          <div className="flex items-center gap-x-2 md:gap-x-4 min-w-0 flex-1">
             <MediaItem data={track} />
             <LikeButton track={track} />
           </div>
           <button
             type="button"
             onClick={() => player.setQueueOpen(true)}
-            className="p-2 rounded-full text-neutral-400 hover:text-white transition"
+            className="p-2 rounded-full text-neutral-400 hover:text-white transition min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center shrink-0"
             aria-label="Open queue"
           >
             <MdQueueMusic size={22} />
@@ -196,22 +225,22 @@ export const PlayerContent: React.FC<PlayerContentProps> = ({ track, songUrl }) 
           <button
             type="button"
             onClick={() => player.setExpanded(true)}
-            className="p-2 rounded-full text-neutral-400 hover:text-white transition"
+            className="p-2 rounded-full text-neutral-400 hover:text-white transition min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center shrink-0"
             aria-label="Expand now playing"
           >
             <MdFullscreen size={22} />
           </button>
         </div>
 
-        <div className="flex md:hidden col-auto w-full justify-end items-center">
-          <div
+        <div className="flex md:hidden col-auto w-full justify-end items-center shrink-0">
+          <button
+            type="button"
             onClick={handlePlay}
-            className="min-h-[44px] min-w-[44px] h-11 w-11 flex items-center justify-center rounded-full bg-white p-1 cursor-pointer"
-            role="button"
+            className="min-h-[44px] min-w-[44px] h-11 w-11 flex items-center justify-center rounded-full bg-white p-1 cursor-pointer shrink-0"
             aria-label={isPlaying ? 'Pause' : 'Play'}
           >
             <Icon size={30} className="text-black" />
-          </div>
+          </button>
         </div>
 
         {/* Desktop: center column = playback commands + progress bar below (Spotify-style) */}
@@ -272,21 +301,6 @@ export const PlayerContent: React.FC<PlayerContentProps> = ({ track, songUrl }) 
       <div className="flex md:hidden items-center gap-3 w-full min-w-0 px-0">
         {progressBar}
       </div>
-
-      {player.isExpanded && (
-        <NowPlayingExpanded
-          track={track}
-          isPlaying={isPlaying}
-          onPlayPause={handlePlay}
-          onPrevious={onPlayPreviousSong}
-          onNext={onPlayNextSong}
-          progress={progress}
-          durationSec={durationSec}
-          currentTime={currentTime}
-          onProgressChange={handleProgressChange}
-          formatTime={formatTime}
-        />
-      )}
     </div>
   );
 };
