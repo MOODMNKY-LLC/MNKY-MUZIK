@@ -3,14 +3,25 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useUser } from '@/hooks/useUser';
 import { toast } from 'react-hot-toast';
 import type { EnrichedRequestArtist, EnrichedRequestAlbum } from '@/types';
+
+interface MusicRequest {
+  id: string;
+  type: string;
+  title: string;
+  artist_name: string | null;
+  status: string;
+  created_at: string | null;
+}
 
 interface RequestContentProps {
   configured: boolean;
 }
 
 export function RequestContent({ configured }: RequestContentProps) {
+  const { user } = useUser();
   const [query, setQuery] = useState('');
   const [artists, setArtists] = useState<EnrichedRequestArtist[]>([]);
   const [albums, setAlbums] = useState<EnrichedRequestAlbum[]>([]);
@@ -18,7 +29,24 @@ export function RequestContent({ configured }: RequestContentProps) {
   const [error, setError] = useState<string | null>(null);
   const [requesting, setRequesting] = useState<string | null>(null);
   const [expandedOverview, setExpandedOverview] = useState<string | null>(null);
+  const [requestHistory, setRequestHistory] = useState<MusicRequest[]>([]);
   const debouncedQuery = useDebounce(query, 400);
+
+  useEffect(() => {
+    if (!user) {
+      setRequestHistory([]);
+      return;
+    }
+    fetch('/api/request/history', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data: { requests?: MusicRequest[] }) => setRequestHistory(data.requests ?? []))
+      .catch(() => setRequestHistory([]));
+  }, [user]);
+
+  const isRequested = (displayLabel: string) => {
+    const label = displayLabel.toLowerCase();
+    return requestHistory.some((r) => r.title.toLowerCase().includes(label));
+  };
 
   const search = useCallback(async () => {
     if (!debouncedQuery.trim()) {
@@ -31,7 +59,8 @@ export function RequestContent({ configured }: RequestContentProps) {
     setError(null);
     try {
       const res = await fetch(
-        `/api/request/search?q=${encodeURIComponent(debouncedQuery)}`
+        `/api/request/search?q=${encodeURIComponent(debouncedQuery)}`,
+        { credentials: 'include' }
       );
       const data = await res.json();
 
@@ -66,16 +95,21 @@ export function RequestContent({ configured }: RequestContentProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'artist', artist }),
+        credentials: 'include',
       });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error ?? 'Request failed');
         return;
       }
+      setRequestHistory((prev) => [
+        { id: crypto.randomUUID(), type: 'artist', title: name, artist_name: name, status: 'requested', created_at: new Date().toISOString() },
+        ...prev,
+      ]);
       toast.success(
         artist.alreadyInLibrary
           ? 'Already in your library'
-          : 'Artist added to Lidarr. It will download and appear in your library.'
+          : 'Artist added. It will download and appear in your library when ready.'
       );
     } catch {
       toast.error('Request failed');
@@ -100,16 +134,21 @@ export function RequestContent({ configured }: RequestContentProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'album', album }),
+        credentials: 'include',
       });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error ?? 'Request failed');
         return;
       }
+      setRequestHistory((prev) => [
+        { id: crypto.randomUUID(), type: 'album', title: label, artist_name: artistName || null, status: 'requested', created_at: new Date().toISOString() },
+        ...prev,
+      ]);
       toast.success(
         album.alreadyInLibrary
           ? 'Already in your library'
-          : 'Album added to Lidarr. It will download and appear in your library.'
+          : 'Album added. It will download and appear in your library when ready.'
       );
     } catch {
       toast.error('Request failed');
@@ -129,6 +168,28 @@ export function RequestContent({ configured }: RequestContentProps) {
 
   return (
     <div className="px-4 sm:px-6 pb-8 space-y-6">
+      {user && requestHistory.length > 0 && (
+        <section>
+          <h2 className="text-white text-xl font-semibold mb-3">Your requests</h2>
+          <ul className="space-y-2">
+            {requestHistory.slice(0, 10).map((r) => (
+              <li
+                key={r.id}
+                className="flex items-center justify-between rounded-lg bg-neutral-800/50 px-4 py-2"
+              >
+                <span className="text-white text-sm truncate">{r.title}</span>
+                <span
+                  className={`text-xs px-2 py-0.5 rounded shrink-0 ${
+                    r.status === 'available' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-neutral-600/50 text-neutral-400'
+                  }`}
+                >
+                  {r.status === 'available' ? 'In library' : 'Requested'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <div className="flex gap-2">
         <input
           type="text"
@@ -209,6 +270,11 @@ export function RequestContent({ configured }: RequestContentProps) {
                       {artist.alreadyInLibrary && (
                         <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400">
                           In library
+                        </span>
+                      )}
+                      {!artist.alreadyInLibrary && isRequested(name) && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-400">
+                          Requested
                         </span>
                       )}
                     </div>
@@ -327,6 +393,11 @@ export function RequestContent({ configured }: RequestContentProps) {
                       {album.alreadyInLibrary && (
                         <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400">
                           In library
+                        </span>
+                      )}
+                      {!album.alreadyInLibrary && isRequested(artistName ? `${artistName} – ${title}` : title) && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-400">
+                          Requested
                         </span>
                       )}
                     </div>

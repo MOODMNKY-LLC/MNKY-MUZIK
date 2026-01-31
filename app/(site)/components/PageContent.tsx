@@ -2,6 +2,7 @@
 
 import { SongItem } from '@/components/SongItem';
 import { useOnPlay } from '@/hooks/useOnPlay';
+import { useQueueActions } from '@/hooks/useQueueActions';
 import type { Song, SupabaseTrack } from '@/types';
 
 interface PageContentProps {
@@ -11,6 +12,7 @@ interface PageContentProps {
 export const PageContent: React.FC<PageContentProps> = ({ songs }) => {
   const tracks: SupabaseTrack[] = songs.map((s) => ({ ...s, source: 'supabase' }));
   const onPlay = useOnPlay(tracks);
+  const { addTrackToQueue, playTrackNext } = useQueueActions(tracks);
 
   if (tracks.length === 0) {
     return <div className="mt-4 text-neutral-400">No songs available</div>;
@@ -31,7 +33,13 @@ export const PageContent: React.FC<PageContentProps> = ({ songs }) => {
         "
     >
       {tracks.map((item) => (
-        <SongItem key={item.id} onClick={(id: string) => onPlay(id)} data={item} />
+        <SongItem
+          key={item.id}
+          onClick={(id: string) => onPlay(id)}
+          data={item}
+          onAddToQueue={() => addTrackToQueue(item)}
+          onPlayNext={() => playTrackNext(item)}
+        />
       ))}
     </div>
   );

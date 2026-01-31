@@ -166,8 +166,8 @@ refresh_token_reuse_interval = 10
 enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
-# Allow/disallow testing manual linking of accounts
-enable_manual_linking = false
+# Allow/disallow testing manual linking of accounts (enabled so email users can "Connect Spotify")
+enable_manual_linking = true
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
 minimum_password_length = 6
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
@@ -300,20 +300,26 @@ max_frequency = "5s"
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
 
-# GitHub OAuth for local dev (official: https://supabase.com/docs/guides/local-development/managing-config)
-# 1. Create an OAuth App (not GitHub App) at https://github.com/settings/developers
-# 2. Set Authorization callback URL to: http://127.0.0.1:54321/auth/v1/callback
-# 3. Put GITHUB_CLIENT_ID and GITHUB_SECRET in a .env file at project root (same level as supabase/)
-# 4. Run `supabase start` from project root — CLI loads .env automatically.
-#    If you keep secrets in .env.local only, run `pnpm run supabase:start` instead.
+# GitHub OAuth (disabled; Spotify OAuth used instead)
 [auth.external.github]
-enabled = true
+enabled = false
 client_id = "env(GITHUB_CLIENT_ID)"
 secret = "env(GITHUB_SECRET)"
 redirect_uri = ""
 url = ""
 skip_nonce_check = false
 email_optional = true
+
+# Spotify OAuth for local dev (same app/creds as Client Credentials in libs/spotify.ts)
+# 1. In Spotify Developer Dashboard: add Redirect URI http://127.0.0.1:54321/auth/v1/callback (local)
+#    For hosted Supabase add https://<project-ref>.supabase.co/auth/v1/callback (from Dashboard → Auth → Providers → Spotify)
+# 2. Put SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET in .env at project root; run `supabase start` (or `pnpm run supabase:start` if using .env.local)
+[auth.external.spotify]
+enabled = true
+client_id = "env(SPOTIFY_CLIENT_ID)"
+secret = "env(SPOTIFY_CLIENT_SECRET)"
+redirect_uri = ""
+url = ""
 
 [auth.external.apple]
 enabled = false

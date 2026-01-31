@@ -1,4 +1,4 @@
-import type { User } from '@supabase/supabase-js';
+import type { User, Session } from '@supabase/supabase-js';
 import { useState, createContext, useEffect, useContext, useMemo } from 'react';
 
 import { useSupabaseClient } from '@/providers/SupabaseProvider';
@@ -6,6 +6,12 @@ import type { UserDetails, UserRole, Subscription } from '@/types';
 
 type UserContextType = {
   accessToken: string | null;
+  /** Spotify access token when user signed in with Spotify (session.provider_token) */
+  spotifyAccessToken: string | null;
+  /** Spotify refresh token when available (session.provider_refresh_token) */
+  spotifyRefreshToken: string | null;
+  /** True when session has a Spotify provider token (user is Spotify-linked) */
+  isSpotifyLinked: boolean;
   user: User | null;
   userDetails: UserDetails | null;
   isLoading: boolean;
@@ -24,7 +30,7 @@ export interface Props {
 export const MyUserContextProvider = (props: Props) => {
   const supabase = useSupabaseClient();
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<{ access_token?: string } | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
   useEffect(() => {
@@ -47,6 +53,23 @@ export const MyUserContextProvider = (props: Props) => {
   }, [supabase]);
 
   const accessToken = session?.access_token ?? null;
+  const spotifyAccessToken = session?.provider_token ?? null;
+  const spotifyRefreshToken = session?.provider_refresh_token ?? null;
+
+  // When session.provider_token is null (e.g. after Supabase refresh), check DB via API
+  const [dbSpotifyLinked, setDbSpotifyLinked] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!user || spotifyAccessToken) {
+      setDbSpotifyLinked(null);
+      return;
+    }
+    fetch('/api/spotify/user/linked', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data: { linked?: boolean }) => setDbSpotifyLinked(data.linked === true))
+      .catch(() => setDbSpotifyLinked(false));
+  }, [user, spotifyAccessToken]);
+
+  const isSpotifyLinked = Boolean(spotifyAccessToken) || dbSpotifyLinked === true;
 
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
@@ -119,6 +142,9 @@ export const MyUserContextProvider = (props: Props) => {
 
   const value = {
     accessToken,
+    spotifyAccessToken,
+    spotifyRefreshToken,
+    isSpotifyLinked,
     user,
     userDetails,
     isLoading: isLoadingUser || isLoadingData,

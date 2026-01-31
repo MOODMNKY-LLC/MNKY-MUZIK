@@ -9,10 +9,11 @@ import { usePlayer } from '@/hooks/usePlayer';
 import { BsPauseFill, BsPlayFill } from 'react-icons/bs';
 import { AiFillBackward, AiFillStepForward } from 'react-icons/ai';
 import { HiSpeakerXMark, HiSpeakerWave } from 'react-icons/hi2';
-import { MdShuffle, MdRepeat, MdRepeatOne } from 'react-icons/md';
+import { MdShuffle, MdRepeat, MdRepeatOne, MdQueueMusic, MdFullscreen } from 'react-icons/md';
 
 import { MediaItem } from './MediaItem';
 import { LikeButton } from './LikeButton';
+import { NowPlayingExpanded } from './NowPlayingExpanded';
 import { Slider } from './Slider';
 import useSound from 'use-sound';
 
@@ -66,7 +67,7 @@ export const PlayerContent: React.FC<PlayerContentProps> = ({ track, songUrl }) 
     player.setId(order[prevIndex]);
   };
 
-  const [play, { pause, sound, duration }] = useSound(songUrl, {
+  const [play, { pause, sound, duration: durationMs }] = useSound(songUrl, {
     volume: volume,
     onplay: () => setIsPlaying(true),
     onend: () => {
@@ -116,11 +117,13 @@ export const PlayerContent: React.FC<PlayerContentProps> = ({ track, songUrl }) 
     setCurrentTime(0);
   }, [songUrl]);
 
-  const progress = duration && duration > 0 ? currentTime / duration : 0;
+  // use-sound returns duration in milliseconds; convert to seconds for display and progress
+  const durationSec = durationMs != null ? durationMs / 1000 : 0;
+  const progress = durationSec > 0 ? currentTime / durationSec : 0;
 
   const handleProgressChange = (value: number) => {
-    if (!sound || !duration) return;
-    const sec = value * duration;
+    if (!sound || !durationSec) return;
+    const sec = value * durationSec;
     setCurrentTime(sec);
     if (typeof (sound as { seek: (s?: number) => number }).seek === 'function') {
       (sound as { seek: (s: number) => number }).seek(sec);
@@ -143,155 +146,147 @@ export const PlayerContent: React.FC<PlayerContentProps> = ({ track, songUrl }) 
     }
   };
 
+  const progressBar = (
+    <div className="flex items-center gap-3 min-w-0 w-full max-w-[540px]">
+      <span className="w-10 shrink-0 text-right text-xs text-neutral-400 tabular-nums">
+        {formatTime(currentTime)}
+      </span>
+      <div className="flex-1 min-w-0">
+        <Slider
+          value={progress}
+          onChange={(v) => {
+            setIsScrubbing(true);
+            handleProgressChange(v);
+          }}
+          onValueChangeCommit={() => setIsScrubbing(false)}
+          step={0.001}
+          ariaLabel="Track progress"
+        />
+      </div>
+      <span className="w-10 shrink-0 text-xs text-neutral-400 tabular-nums">
+        {durationSec > 0 ? formatTime(durationSec) : '0:00'}
+      </span>
+    </div>
+  );
+
   return (
     <div className="flex flex-col gap-1 w-full">
-      {/* Progress bar: current time, scrubable slider, duration */}
-      <div className="flex items-center gap-3 w-full min-w-0">
-        <span className="w-10 shrink-0 text-right text-xs text-neutral-400 tabular-nums">
-          {formatTime(currentTime)}
-        </span>
-        <div className="flex-1 min-w-0">
-          <Slider
-            value={progress}
-            onChange={(v) => {
-              setIsScrubbing(true);
-              handleProgressChange(v);
-            }}
-            onValueChangeCommit={() => setIsScrubbing(false)}
-            step={0.001}
-            ariaLabel="Track progress"
-          />
-        </div>
-        <span className="w-10 shrink-0 text-xs text-neutral-400 tabular-nums">
-          {duration != null ? formatTime(duration) : '0:00'}
-        </span>
-      </div>
-
       <div
         className="
         grid
         grid-cols-2
         md:grid-cols-3
         h-full
+        items-center
         "
       >
-      <div
-        className="
-            flex
-            w-full
-            justify-start
-            "
-      >
-        <div
-          className="
-                flex
-                items-center
-                gap-x-4
-                "
-        >
-          <MediaItem data={track} />
-          <LikeButton track={track} />
+        <div className="flex w-full justify-start items-center gap-x-2">
+          <div className="flex items-center gap-x-4">
+            <MediaItem data={track} />
+            <LikeButton track={track} />
+          </div>
+          <button
+            type="button"
+            onClick={() => player.setQueueOpen(true)}
+            className="p-2 rounded-full text-neutral-400 hover:text-white transition"
+            aria-label="Open queue"
+          >
+            <MdQueueMusic size={22} />
+          </button>
+          <button
+            type="button"
+            onClick={() => player.setExpanded(true)}
+            className="p-2 rounded-full text-neutral-400 hover:text-white transition"
+            aria-label="Expand now playing"
+          >
+            <MdFullscreen size={22} />
+          </button>
         </div>
-      </div>
 
-      <div
-        className="
-            flex
-            md:hidden
-            col-auto
-            w-full
-            justify-end
-            items-center
-            "
-      >
-        <div
-          onClick={handlePlay}
-          className="
-                min-h-[44px]
-                min-w-[44px]
-                h-11
-                w-11
-                flex
-                items-center
-                justify-center
-                rounded-full
-                bg-white
-                p-1
-                cursor-pointer
-                "
-          role="button"
-          aria-label={isPlaying ? 'Pause' : 'Play'}
-        >
-          <Icon size={30} className="text-black" />
+        <div className="flex md:hidden col-auto w-full justify-end items-center">
+          <div
+            onClick={handlePlay}
+            className="min-h-[44px] min-w-[44px] h-11 w-11 flex items-center justify-center rounded-full bg-white p-1 cursor-pointer"
+            role="button"
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+          >
+            <Icon size={30} className="text-black" />
+          </div>
         </div>
-      </div>
 
-      {/* Desktop: shuffle, prev, play, next, repeat */}
-      <div
-        className="
-            hidden
-            h-full
-            md:flex
-            justify-center
-            items-center
-            w-full
-            max-w-[722px]
-            gap-x-4
-            "
-      >
-        <MdShuffle
-          size={22}
-          onClick={() => player.toggleShuffle()}
-          className={`cursor-pointer transition ${
-            player.shuffle ? 'text-green-500' : 'text-neutral-400 hover:text-white'
-          }`}
-        />
-        <AiFillBackward
-          onClick={onPlayPreviousSong}
-          size={28}
-          className="text-neutral-400 cursor-pointer hover:text-white transition"
-        />
-        <div
-          onClick={handlePlay}
-          className="flex items-center justify-center h-10 w-10 rounded-full bg-white p-1 cursor-pointer"
-        >
-          <Icon size={30} className="text-black" />
-        </div>
-        <AiFillStepForward
-          onClick={onPlayNextSong}
-          size={28}
-          className="text-neutral-400 cursor-pointer hover:text-white transition"
-        />
-        <button
-          type="button"
-          onClick={() => player.cycleRepeat()}
-          className="flex items-center justify-center text-neutral-400 hover:text-white transition"
-          aria-label="Repeat"
-        >
-          {player.repeat === 'one' ? (
-            <MdRepeatOne size={22} className="text-green-500" />
-          ) : (
-            <MdRepeat
+        {/* Desktop: center column = playback commands + progress bar below (Spotify-style) */}
+        <div className="hidden md:flex flex-col items-center justify-center w-full max-w-[722px] gap-1">
+          <div className="flex items-center gap-x-4">
+            <MdShuffle
               size={22}
-              className={player.repeat === 'all' ? 'text-green-500' : ''}
+              onClick={() => player.toggleShuffle()}
+              className={`cursor-pointer transition ${
+                player.shuffle ? 'text-green-500' : 'text-neutral-400 hover:text-white'
+              }`}
             />
-          )}
-        </button>
-      </div>
+            <AiFillBackward
+              onClick={onPlayPreviousSong}
+              size={28}
+              className="text-neutral-400 cursor-pointer hover:text-white transition"
+            />
+            <div
+              onClick={handlePlay}
+              className="flex items-center justify-center h-10 w-10 rounded-full bg-white p-1 cursor-pointer"
+            >
+              <Icon size={30} className="text-black" />
+            </div>
+            <AiFillStepForward
+              onClick={onPlayNextSong}
+              size={28}
+              className="text-neutral-400 cursor-pointer hover:text-white transition"
+            />
+            <button
+              type="button"
+              onClick={() => player.cycleRepeat()}
+              className="flex items-center justify-center text-neutral-400 hover:text-white transition"
+              aria-label="Repeat"
+            >
+              {player.repeat === 'one' ? (
+                <MdRepeatOne size={22} className="text-green-500" />
+              ) : (
+                <MdRepeat
+                  size={22}
+                  className={player.repeat === 'all' ? 'text-green-500' : ''}
+                />
+              )}
+            </button>
+          </div>
+          {/* Progress bar below playback commands, centered, constrained width */}
+          {progressBar}
+        </div>
 
-      <div className="hidden md:flex w-full justify-end pr-2">
-        <div className="flex items-center gap-x-2 w-[120px]">
-          <VolumeIcon
-            onClick={toggleMute}
-            className="
-                cursor-pointer
-                "
-            size={34}
-          />
-          <Slider value={volume} onChange={(value) => setVolume(value)} />
+        <div className="hidden md:flex w-full justify-end pr-2">
+          <div className="flex items-center gap-x-2 w-[120px]">
+            <VolumeIcon onClick={toggleMute} className="cursor-pointer" size={34} />
+            <Slider value={volume} onChange={(value) => setVolume(value)} />
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Mobile: progress bar full width below the grid */}
+      <div className="flex md:hidden items-center gap-3 w-full min-w-0 px-0">
+        {progressBar}
+      </div>
+
+      {player.isExpanded && (
+        <NowPlayingExpanded
+          track={track}
+          isPlaying={isPlaying}
+          onPlayPause={handlePlay}
+          onPrevious={onPlayPreviousSong}
+          onNext={onPlayNextSong}
+          progress={progress}
+          durationSec={durationSec}
+          currentTime={currentTime}
+          onProgressChange={handleProgressChange}
+          formatTime={formatTime}
+        />
+      )}
     </div>
   );
 };

@@ -9,10 +9,18 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Input } from './Input';
 
-export const SearchInput = () => {
+interface SearchInputProps {
+  initialQuery?: string;
+}
+
+export const SearchInput = ({ initialQuery = '' }: SearchInputProps) => {
   const router = useRouter();
-  const [value, setValue] = useState<string>('');
+  const [value, setValue] = useState<string>(initialQuery);
   const debouncedValue = useDebounce<string>(value, 500);
+
+  useEffect(() => {
+    setValue(initialQuery);
+  }, [initialQuery]);
 
   useEffect(() => {
     const query = {
@@ -28,7 +36,7 @@ export const SearchInput = () => {
 
   return (
     <Input
-      placeholder="What do you want to listen to?"
+      placeholder="Search by artist, song, or album"
       value={value}
       onChange={(e) => setValue(e.target.value)}
     />

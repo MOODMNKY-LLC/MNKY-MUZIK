@@ -1,5 +1,5 @@
-import type { Track, SupabaseTrack, NavidromeTrack } from '@/types';
-import { NAVIDROME_ID_PREFIX } from '@/types';
+import type { Track, SupabaseTrack, NavidromeTrack, SpotifyTrack } from '@/types';
+import { NAVIDROME_ID_PREFIX, SPOTIFY_ID_PREFIX } from '@/types';
 import { useSupabaseClient } from '@/providers/SupabaseProvider';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
@@ -19,6 +19,26 @@ export function useGetTrackById(activeId?: string): { track: Track | undefined; 
     setTrack(undefined);
 
     const fetchTrack = async () => {
+      if (activeId.startsWith(SPOTIFY_ID_PREFIX)) {
+        const spotifyId = activeId.slice(SPOTIFY_ID_PREFIX.length);
+        try {
+          const base = typeof window !== 'undefined' ? window.location.origin : '';
+          const res = await fetch(`${base}/api/spotify/user/track/${encodeURIComponent(spotifyId)}`, {
+            credentials: 'include',
+          });
+          if (!res.ok) {
+            toast.error('Track not found');
+            return;
+          }
+          const data = (await res.json()) as SpotifyTrack;
+          setTrack(data);
+        } catch {
+          toast.error('Failed to load track');
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
       if (activeId.startsWith(NAVIDROME_ID_PREFIX)) {
         const navidromeId = activeId.slice(NAVIDROME_ID_PREFIX.length);
         try {

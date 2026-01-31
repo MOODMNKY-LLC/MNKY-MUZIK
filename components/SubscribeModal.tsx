@@ -97,14 +97,14 @@ const SubscribeModal: React.FC<subscribeModalProps> = ({ products }) => {
     }
   };
 
-  let content = <div className="text-center">No products avaliable</div>;
+  let content = <div className="text-center">No products available</div>;
 
   if (products.length) {
     content = (
       <div>
         {products.map((product) => {
           if (!product.prices?.length) {
-            return <div key={product.id}>No prices avaliable</div>;
+            return <div key={product.id}>No prices available</div>;
           }
 
           return product.prices.map((price) => (
@@ -143,7 +143,7 @@ const SubscribeModal: React.FC<subscribeModalProps> = ({ products }) => {
       <div className="space-y-4">
         {content}
         <div className="border-t pt-4">
-          <p className="text-xs text-muted-foreground mb-2">Have a beta code?</p>
+          <p className="text-xs text-muted-foreground mb-2">Have a beta code? Ask your admin for one.</p>
           <form onSubmit={handleBetaVerify} className="flex gap-2">
             <div className="flex-1 grid gap-1">
               <Label htmlFor="beta-pin" className="sr-only">

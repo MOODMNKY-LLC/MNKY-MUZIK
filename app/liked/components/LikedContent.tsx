@@ -10,6 +10,7 @@ import { useUser } from '@/hooks/useUser';
 import { MediaItem } from '@/components/MediaItem';
 import { LikeButton } from '@/components/LikeButton';
 import { useOnPlay } from '@/hooks/useOnPlay';
+import { useQueueActions } from '@/hooks/useQueueActions';
 
 interface LikedContentProps {
   tracks: Track[];
@@ -19,6 +20,7 @@ export const LikedContent: React.FC<LikedContentProps> = ({ tracks }) => {
   const router = useRouter();
   const { isLoading, user } = useUser();
   const onPlay = useOnPlay(tracks);
+  const { addTrackToQueue, playTrackNext } = useQueueActions(tracks);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -47,8 +49,13 @@ export const LikedContent: React.FC<LikedContentProps> = ({ tracks }) => {
         const key = isSupabaseTrack(track) ? track.id : NAVIDROME_ID_PREFIX + track.id;
         return (
           <div key={key} className="flex items-center gap-x-4 w-full">
-            <div className="flex-1">
-              <MediaItem onClick={(id: string) => onPlay(id)} data={track} />
+            <div className="flex-1 min-w-0">
+              <MediaItem
+                onClick={(id: string) => onPlay(id)}
+                data={track}
+                onAddToQueue={() => addTrackToQueue(track)}
+                onPlayNext={() => playTrackNext(track)}
+              />
             </div>
             <LikeButton track={track} />
           </div>

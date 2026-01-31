@@ -36,24 +36,19 @@ export default async function Page({
                 <p className="text-sm text-muted-foreground">An unspecified error occurred.</p>
               )}
               <p className="text-sm text-muted-foreground">
-                For GitHub sign-in with <strong>local Supabase</strong> (see{' '}
-                <a href="https://supabase.com/docs/guides/local-development/managing-config" className="underline" target="_blank" rel="noopener noreferrer">Managing config</a>):
+                For <strong>Spotify</strong> sign-in: ensure the Supabase callback URL is added in the Spotify Developer Dashboard under Redirect URIs. See{' '}
+                <a href="https://supabase.com/docs/guides/auth/social-login/auth-spotify" className="underline" target="_blank" rel="noopener noreferrer">Login with Spotify</a> and{' '}
+                <a href="https://supabase.com/docs/guides/local-development/managing-config" className="underline" target="_blank" rel="noopener noreferrer">Managing config</a>.
               </p>
               <ul className="list-inside list-disc text-sm text-muted-foreground space-y-1">
                 <li>
-                  Use an <strong>OAuth App</strong> (not a GitHub App) at{' '}
-                  <a href="https://github.com/settings/developers" className="underline" target="_blank" rel="noopener noreferrer">github.com/settings/developers</a>.
+                  In <a href="https://developer.spotify.com/dashboard" className="underline" target="_blank" rel="noopener noreferrer">Spotify Developer Dashboard</a>: open your app → Edit Settings → Redirect URIs.
                 </li>
                 <li>
-                  Set <strong>Authorization callback URL</strong> to exactly{' '}
-                  <code className="rounded bg-muted px-1">http://127.0.0.1:54321/auth/v1/callback</code>.
+                  Add <code className="rounded bg-muted px-1">http://127.0.0.1:54321/auth/v1/callback</code> for local Supabase, or use the URL from Supabase Dashboard → Auth → Providers → Spotify for hosted.
                 </li>
                 <li>
-                  Put <code className="rounded bg-muted px-1">GITHUB_CLIENT_ID</code> and{' '}
-                  <code className="rounded bg-muted px-1">GITHUB_SECRET</code> in a <code className="rounded bg-muted px-1">.env</code> file at <strong>project root</strong> (same level as <code className="rounded bg-muted px-1">supabase/</code>), then run <code className="rounded bg-muted px-1">supabase start</code>. If you use <code className="rounded bg-muted px-1">.env.local</code> only, run <code className="rounded bg-muted px-1">pnpm run supabase:start</code> instead.
-                </li>
-                <li>
-                  Using <strong>hosted</strong> Supabase? Use the callback URL from Dashboard → Auth → Providers → GitHub.
+                  Set <code className="rounded bg-muted px-1">SPOTIFY_CLIENT_ID</code> and <code className="rounded bg-muted px-1">SPOTIFY_CLIENT_SECRET</code> in <code className="rounded bg-muted px-1">.env</code> at project root; run <code className="rounded bg-muted px-1">supabase start</code> (or <code className="rounded bg-muted px-1">pnpm run supabase:start</code> if using <code className="rounded bg-muted px-1">.env.local</code>).
                 </li>
               </ul>
               <Link

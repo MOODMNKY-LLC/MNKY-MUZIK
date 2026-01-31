@@ -8,6 +8,11 @@ function isNavidromeCover(src: string): boolean {
   return typeof src === 'string' && src.startsWith('/api/navidrome/cover');
 }
 
+/** External URLs (http/https) - use native img to avoid next/image hostname config issues across CDNs. */
+function isExternalUrl(src: string): boolean {
+  return typeof src === 'string' && (src.startsWith('http://') || src.startsWith('https://'));
+}
+
 export interface CoverImageProps {
   src: string;
   alt: string;
@@ -19,8 +24,8 @@ export interface CoverImageProps {
 }
 
 /**
- * Renders cover art: native <img> for Navidrome API URLs (avoids hydration mismatch),
- * next/image for Supabase and external URLs.
+ * Renders cover art: native <img> for Navidrome, external URLs (http/https),
+ * next/image only for local paths (e.g. /images/).
  */
 export function CoverImage({
   src,
@@ -31,7 +36,7 @@ export function CoverImage({
   loading,
   unoptimized = false,
 }: CoverImageProps) {
-  if (isNavidromeCover(src)) {
+  if (isNavidromeCover(src) || isExternalUrl(src)) {
     return (
       <img
         src={src}

@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { createMusicRequest } from '@/libs/musicRequests';
 import {
   isLidarrConfigured,
   addArtist,
   addAlbum,
-  artistLookup,
 } from '@/libs/lidarr';
 
 export async function POST(request: Request) {
@@ -25,6 +26,12 @@ export async function POST(request: Request) {
     return rest;
   };
 
+  const getUserId = async () => {
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.user?.id ?? null;
+  };
+
   if (type === 'artist' && artistBody) {
     try {
       const payload = stripEnrichment(artistBody);
@@ -34,6 +41,21 @@ export async function POST(request: Request) {
           { error: 'Lidarr did not add the artist' },
           { status: 502 }
         );
+      }
+      const name = String(artistBody.artistName ?? artistBody.name ?? 'Unknown');
+      const userId = await getUserId();
+      if (userId) {
+        try {
+          await createMusicRequest({
+            userId,
+            type: 'artist',
+            title: name,
+            artistName: name,
+            lidarrId: (result as { id?: number })?.id != null ? String((result as { id: number }).id) : null,
+          });
+        } catch {
+          // Non-fatal
+        }
       }
       return NextResponse.json({ success: true, data: result });
     } catch (err) {
@@ -52,6 +74,30 @@ export async function POST(request: Request) {
           { error: 'Lidarr did not add the album' },
           { status: 502 }
         );
+      }
+      const artistName =
+        typeof albumBody.artist === 'object' && albumBody.artist
+          ? String(
+              (albumBody.artist as { artistName?: string; name?: string }).artistName ??
+              (albumBody.artist as { name?: string }).name ??
+              ''
+            )
+          : String(albumBody.artistName ?? '');
+      const title = String(albumBody.title ?? 'Unknown');
+      const label = artistName ? `${artistName} – ${title}` : title;
+      const userId = await getUserId();
+      if (userId) {
+        try {
+          await createMusicRequest({
+            userId,
+            type: 'album',
+            title: label,
+            artistName: artistName || null,
+            lidarrId: (result as { id?: number })?.id != null ? String((result as { id: number }).id) : null,
+          });
+        } catch {
+          // Non-fatal
+        }
       }
       return NextResponse.json({ success: true, data: result });
     } catch (err) {

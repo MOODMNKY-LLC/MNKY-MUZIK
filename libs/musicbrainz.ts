@@ -49,6 +49,7 @@ async function musicbrainzFetch<T>(path: string, params?: Record<string, string>
 export interface MusicBrainzArtist {
   id: string;
   name: string;
+  disambiguation?: string;
   'sort-name'?: string;
   type?: string;
   'life-span'?: { begin?: string; end?: string };

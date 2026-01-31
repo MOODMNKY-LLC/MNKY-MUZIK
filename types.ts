@@ -3,6 +3,9 @@ import Stripe from 'stripe';
 /** Prefix for Navidrome track ids in player/store (distinguish from Supabase song id). */
 export const NAVIDROME_ID_PREFIX = 'nd:';
 
+/** Prefix for Spotify track ids in player/store. */
+export const SPOTIFY_ID_PREFIX = 'spotify:';
+
 export interface Song {
   id: string;
   user_id: string;
@@ -49,8 +52,20 @@ export interface NavidromeTrack {
 /** Supabase song used as a playable track (source supabase). */
 export type SupabaseTrack = Song & { source: 'supabase' };
 
-/** Union: playable track from either Supabase or Navidrome. */
-export type Track = SupabaseTrack | NavidromeTrack;
+/** Spotify track – for Web Playback SDK playback. */
+export interface SpotifyTrack {
+  id: string;
+  source: 'spotify';
+  title: string;
+  artist?: string;
+  album?: string;
+  coverArt?: string;
+  duration?: number;
+  uri?: string;
+}
+
+/** Union: playable track from Supabase, Navidrome, or Spotify. */
+export type Track = SupabaseTrack | NavidromeTrack | SpotifyTrack;
 
 export function isNavidromeTrack(t: Track): t is NavidromeTrack {
   return t.source === 'navidrome';
@@ -58,6 +73,10 @@ export function isNavidromeTrack(t: Track): t is NavidromeTrack {
 
 export function isSupabaseTrack(t: Track): t is SupabaseTrack {
   return t.source === 'supabase';
+}
+
+export function isSpotifyTrack(t: Track): t is SpotifyTrack {
+  return t.source === 'spotify';
 }
 
 export type UserRole = 'admin' | 'beta' | 'user';

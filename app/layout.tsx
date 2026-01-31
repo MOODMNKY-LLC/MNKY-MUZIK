@@ -14,6 +14,7 @@ import { PWAInstallBanner } from '@/components/PWAInstallBanner';
 import { getSongsByUserId } from '@/actions/getSongsByUserId';
 import { Player } from '@/components/Player';
 import { getActiveProductsWithPrices } from '@/actions/getActiveProductsWithPrices';
+import { QueueDrawerWrapper } from '@/components/QueueDrawerWrapper';
 
 //* Describe the web app
 export const metadata = {
@@ -61,6 +62,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <ModalProvider products={products} />
               <Sidebar songs={userSongs}>{children}</Sidebar>
               <Player />
+              <QueueDrawerWrapper />
             </UserProvider>
           </SupabaseProvider>
           <PWAInstallBanner />

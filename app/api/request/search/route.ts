@@ -4,6 +4,7 @@ import {
   albumLookup,
   isLidarrConfigured,
 } from '@/libs/lidarr';
+import { getArtist as getMusicBrainzArtist, getRelease as getMusicBrainzRelease } from '@/libs/musicbrainz';
 import { search2, isNavidromeConfigured } from '@/libs/navidrome';
 import {
   search as spotifySearch,
@@ -21,6 +22,8 @@ export const dynamic = 'force-dynamic';
 
 const MAX_ARTISTS = 10;
 const MAX_ALBUMS = 10;
+const MAX_MUSICBRAINZ_ARTISTS = 3;
+const MAX_MUSICBRAINZ_ALBUMS = 3;
 
 function normalize(s: string): string {
   return s
@@ -149,6 +152,28 @@ export async function GET(request: Request) {
         };
       })
     );
+
+    // Optional MusicBrainz enrichment: disambiguation for artists, release date for albums (rate-limited ~1 req/s)
+    for (let i = 0; i < Math.min(MAX_MUSICBRAINZ_ARTISTS, enrichedArtists.length); i++) {
+      const a = enrichedArtists[i];
+      const mbid = a.foreignArtistId;
+      if (mbid && !a.disambiguation) {
+        const mb = await getMusicBrainzArtist(mbid);
+        if (mb?.disambiguation) {
+          enrichedArtists[i] = { ...a, disambiguation: mb.disambiguation };
+        }
+      }
+    }
+    for (let i = 0; i < Math.min(MAX_MUSICBRAINZ_ALBUMS, enrichedAlbums.length); i++) {
+      const a = enrichedAlbums[i];
+      const mbid = a.foreignAlbumId;
+      if (mbid && !a.releaseDate) {
+        const mb = await getMusicBrainzRelease(mbid);
+        if (mb?.date) {
+          enrichedAlbums[i] = { ...a, releaseDate: mb.date };
+        }
+      }
+    }
 
     return NextResponse.json({ artists: enrichedArtists, albums: enrichedAlbums });
   } catch (err) {

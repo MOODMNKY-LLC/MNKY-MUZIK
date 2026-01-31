@@ -2,11 +2,16 @@
 
 import { useCurrentUserImage } from '@/hooks/use-current-user-image'
 import { useCurrentUserName } from '@/hooks/use-current-user-name'
+import { useSpotifyProfile } from '@/hooks/useSpotifyProfile'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export const CurrentUserAvatar = () => {
-  const profileImage = useCurrentUserImage()
-  const name = useCurrentUserName()
+  const spotifyProfile = useSpotifyProfile()
+  const supabaseImage = useCurrentUserImage()
+  const supabaseName = useCurrentUserName()
+
+  const profileImage = spotifyProfile?.image ?? supabaseImage
+  const name = spotifyProfile?.display_name ?? supabaseName
   const initials = name
     ?.split(' ')
     ?.map((word) => word[0])

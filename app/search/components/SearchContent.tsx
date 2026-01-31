@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useOnPlay } from '@/hooks/useOnPlay';
+import { useQueueActions } from '@/hooks/useQueueActions';
 
 import { LikeButton } from '@/components/LikeButton';
 import { MediaItem } from '@/components/MediaItem';
@@ -25,6 +26,7 @@ export const SearchContent: React.FC<SearchContentProps> = ({ songs, navidrome, 
     ...(navidrome?.songs ?? []),
   ];
   const onPlay = useOnPlay(allTracks);
+  const { addTrackToQueue, playTrackNext } = useQueueActions(allTracks);
 
   const hasSongs = allTracks.length > 0;
   const hasAlbums = (navidrome?.albums?.length ?? 0) > 0;
@@ -69,13 +71,24 @@ export const SearchContent: React.FC<SearchContentProps> = ({ songs, navidrome, 
             {allTracks.map((track) =>
               track.source === 'supabase' ? (
                 <div key={track.id} className="flex items-center gap-x-4 w-full">
-                  <div className="flex-1">
-                    <MediaItem onClick={(id: string) => onPlay(id)} data={track} />
+                  <div className="flex-1 min-w-0">
+                    <MediaItem
+                      onClick={(id: string) => onPlay(id)}
+                      data={track}
+                      onAddToQueue={() => addTrackToQueue(track)}
+                      onPlayNext={() => playTrackNext(track)}
+                    />
                   </div>
                   <LikeButton track={track} />
                 </div>
               ) : (
-                <TrackRow key={track.id} track={track} tracks={navidrome!.songs} />
+                <TrackRow
+                  key={track.id}
+                  track={track}
+                  tracks={navidrome!.songs}
+                  onAddToQueue={() => addTrackToQueue(track)}
+                  onPlayNext={() => playTrackNext(track)}
+                />
               )
             )}
           </div>

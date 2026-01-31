@@ -1,22 +1,30 @@
 'use client';
 
-import type { NavidromeTrack } from '@/types';
-import { NAVIDROME_ID_PREFIX } from '@/types';
+import type { Track } from '@/types';
+import { NAVIDROME_ID_PREFIX, SPOTIFY_ID_PREFIX, isSpotifyTrack, isSupabaseTrack } from '@/types';
 import { useOnPlay } from '@/hooks/useOnPlay';
 import { useLoadImage } from '@/hooks/useLoadImage';
 import { CoverImage } from '@/components/CoverImage';
 import { LikeButton } from './LikeButton';
 import { PlayButton } from './PlayButton';
+import { QueueActionsMenu } from './QueueActionsMenu';
 
 interface TrackRowProps {
-  track: NavidromeTrack;
-  tracks: NavidromeTrack[];
+  track: Track;
+  tracks: Track[];
+  onAddToQueue?: () => void;
+  onPlayNext?: () => void;
 }
 
-export function TrackRow({ track, tracks }: TrackRowProps) {
+export function TrackRow({
+  track,
+  tracks,
+  onAddToQueue,
+  onPlayNext,
+}: TrackRowProps) {
   const onPlay = useOnPlay(tracks);
   const imageUrl = useLoadImage(track);
-  const playId = NAVIDROME_ID_PREFIX + track.id;
+  const playId = isSpotifyTrack(track) ? SPOTIFY_ID_PREFIX + track.id : NAVIDROME_ID_PREFIX + track.id;
 
   return (
     <div
@@ -48,9 +56,12 @@ export function TrackRow({ track, tracks }: TrackRowProps) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-white truncate">{track.title}</p>
-        <p className="text-neutral-400 text-sm truncate">{track.artist ?? 'Unknown'}</p>
+        <p className="text-neutral-400 text-sm truncate">{isSupabaseTrack(track) ? track.author : (track.artist ?? 'Unknown')}</p>
       </div>
-      <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+      <div className="flex-shrink-0 flex items-center gap-x-1" onClick={(e) => e.stopPropagation()}>
+        {onAddToQueue != null && onPlayNext != null && (
+          <QueueActionsMenu onAddToQueue={onAddToQueue} onPlayNext={onPlayNext} />
+        )}
         <LikeButton track={track} />
       </div>
     </div>

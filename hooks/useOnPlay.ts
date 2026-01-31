@@ -1,5 +1,5 @@
 import type { Track } from '@/types';
-import { isSupabaseTrack, NAVIDROME_ID_PREFIX } from '@/types';
+import { isSupabaseTrack, isSpotifyTrack, NAVIDROME_ID_PREFIX, SPOTIFY_ID_PREFIX } from '@/types';
 import { usePlayer } from './usePlayer';
 import { useAuthModal } from './useAuthModal';
 import { useUser } from './useUser';
@@ -11,7 +11,11 @@ export function useOnPlay(tracks: Track[]) {
   const authModal = useAuthModal();
   const { user, canPlay } = useUser();
 
-  const playIds = tracks.map((t) => (isSupabaseTrack(t) ? t.id : NAVIDROME_ID_PREFIX + t.id));
+  const playIds = tracks.map((t) => {
+    if (isSpotifyTrack(t)) return SPOTIFY_ID_PREFIX + t.id;
+    if (isSupabaseTrack(t)) return t.id;
+    return NAVIDROME_ID_PREFIX + t.id;
+  });
 
   const onPlay = (id: string) => {
     if (!user) return authModal.onOpen();

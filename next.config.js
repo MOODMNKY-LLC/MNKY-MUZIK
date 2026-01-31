@@ -2,6 +2,7 @@
  * @type {import('next').NextConfig}
  */
 const nextConfig = {
+  serverExternalPackages: ['openai'],
   images: {
     remotePatterns: [
       {
@@ -25,6 +26,12 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'i.scdn.co',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'image-cdn-ak.spotifycdn.com',
         port: '',
         pathname: '/**',
       },

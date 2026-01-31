@@ -67,10 +67,11 @@ export function LoginForm({ className, onSuccess, ...props }: LoginFormProps) {
 
     try {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: 'github',
+        provider: 'spotify',
         options: {
           redirectTo: `${window.location.origin}/auth/oauth?next=/`,
-          scopes: 'user user:email',
+          scopes:
+            'user-read-email user-read-private user-library-read user-read-playback-state user-read-currently-playing user-modify-playback-state playlist-read-private playlist-read-collaborative user-top-read user-read-recently-played',
         },
       })
       if (oauthError) throw oauthError
@@ -144,7 +145,7 @@ export function LoginForm({ className, onSuccess, ...props }: LoginFormProps) {
               className="w-full"
               disabled={socialLoading}
             >
-              {socialLoading ? 'Redirecting...' : 'Continue with GitHub'}
+              {socialLoading ? 'Redirecting...' : 'Continue with Spotify'}
             </Button>
           </form>
 
