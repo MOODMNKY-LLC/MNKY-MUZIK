@@ -87,13 +87,13 @@ export const MyUserContextProvider = (props: Props) => {
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
 
-  const getUserDetails = () => supabase.from('users').select('*').single();
+  const getUserDetails = () => supabase.from('users').select('*').maybeSingle();
   const getSubscription = () =>
     supabase
       .from('subscriptions')
       .select('*, prices(*, products(*))')
       .in('status', ['trialing', 'active'])
-      .single();
+      .maybeSingle();
 
   useEffect(() => {
     if (user && !isLoadingData && !userDetails && !subscription) {
@@ -102,13 +102,15 @@ export const MyUserContextProvider = (props: Props) => {
       Promise.allSettled([getUserDetails(), getSubscription()]).then(
         ([userDetailsPromise, subscriptionPromise]) => {
           if (userDetailsPromise.status === 'fulfilled') {
-            setUserDetails(userDetailsPromise.value?.data as unknown as UserDetails);
+            const data = userDetailsPromise.value?.data;
+            setUserDetails(data != null ? (data as unknown as UserDetails) : null);
           } else {
             console.error(userDetailsPromise.reason);
           }
 
           if (subscriptionPromise.status === 'fulfilled') {
-            setSubscription(subscriptionPromise.value?.data as unknown as Subscription);
+            const data = subscriptionPromise.value?.data;
+            setSubscription(data != null ? (data as unknown as Subscription) : null);
           } else {
             console.error(subscriptionPromise.reason);
           }
@@ -130,10 +132,12 @@ export const MyUserContextProvider = (props: Props) => {
       getSubscription(),
     ]);
     if (userDetailsPromise.status === 'fulfilled') {
-      setUserDetails(userDetailsPromise.value?.data as unknown as UserDetails);
+      const data = userDetailsPromise.value?.data;
+      setUserDetails(data != null ? (data as unknown as UserDetails) : null);
     }
     if (subscriptionPromise.status === 'fulfilled') {
-      setSubscription(subscriptionPromise.value?.data as unknown as Subscription);
+      const data = subscriptionPromise.value?.data;
+      setSubscription(data != null ? (data as unknown as Subscription) : null);
     }
     setIsLoadingData(false);
   };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useUser } from '@/hooks/useUser';
 import { createClient } from '@/lib/supabase/client';
@@ -114,6 +114,34 @@ export function HomeSpotifySection() {
     };
   }, [isSpotifyLinked]);
 
+  // All hooks must run unconditionally (before any early return) to avoid React #310.
+  const savedAsTracks: SpotifyTrack[] = useMemo(
+    () =>
+      (savedTracks?.items ?? []).slice(0, 6).map(({ track: t }) => ({
+        id: t.id,
+        source: 'spotify' as const,
+        title: t.name,
+        artist: t.artists?.map((a) => a.name).join(', '),
+        coverArt: t.album?.images?.[0]?.url,
+        uri: `spotify:track:${t.id}`,
+      })),
+    [savedTracks?.items]
+  );
+  const recsAsTracks: SpotifyTrack[] = useMemo(
+    () =>
+      (recommendations?.tracks ?? []).slice(0, 6).map((t) => ({
+        id: t.id,
+        source: 'spotify' as const,
+        title: t.name,
+        artist: t.artists?.map((a) => a.name).join(', '),
+        coverArt: t.album?.images?.[0]?.url,
+        uri: `spotify:track:${t.id}`,
+      })),
+    [recommendations?.tracks]
+  );
+  const onPlaySaved = useOnPlay(savedAsTracks);
+  const onPlayRecs = useOnPlay(recsAsTracks);
+
   if (!isSpotifyLinked) return null;
   if (loading) {
     return (
@@ -154,24 +182,6 @@ export function HomeSpotifySection() {
   const hasSaved = savedTracks?.items?.length;
   const hasRecs = recommendations?.tracks?.length;
 
-  const savedAsTracks: SpotifyTrack[] = (savedTracks?.items ?? []).slice(0, 6).map(({ track: t }) => ({
-    id: t.id,
-    source: 'spotify',
-    title: t.name,
-    artist: t.artists?.map((a) => a.name).join(', '),
-    coverArt: t.album?.images?.[0]?.url,
-    uri: `spotify:track:${t.id}`,
-  }));
-  const recsAsTracks: SpotifyTrack[] = (recommendations?.tracks ?? []).slice(0, 6).map((t) => ({
-    id: t.id,
-    source: 'spotify',
-    title: t.name,
-    artist: t.artists?.map((a) => a.name).join(', '),
-    coverArt: t.album?.images?.[0]?.url,
-    uri: `spotify:track:${t.id}`,
-  }));
-  const onPlaySaved = useOnPlay(savedAsTracks);
-  const onPlayRecs = useOnPlay(recsAsTracks);
   if (!hasPlaylists && !hasSaved && !hasRecs) {
     return (
       <section className="mt-6">
