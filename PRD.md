@@ -1,5 +1,7 @@
 # Product Requirements Document: MNKY MUZIK
 
+MNKY MUZIK is part of the MOOD MNKY ecosystem; full brand and ecosystem docs live at [https://docs.moodmnky.com](https://docs.moodmnky.com).
+
 ## Overview and objectives
 
 MNKY MUZIK is a PWA that combines a local/self-hosted music stack (Navidrome, Lidarr) with optional Spotify integration and AI-powered discovery. Users can:

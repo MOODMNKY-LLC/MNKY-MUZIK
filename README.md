@@ -4,9 +4,9 @@
 
 **A self-hosted, Spotify-style music experience.**
 
-MNKY MUZIK is a PWA that combines your local music stack (Navidrome, Lidarr) with optional Spotify integration and AI-powered discovery. Stream from Navidrome, connect Spotify for playlists and recommendations, request new music via Lidarr, and use AI to generate playlists from natural-language prompts. Playback is gated by Stripe subscription or beta access.
+> **Part of the [MOOD MNKY](https://docs.moodmnky.com) ecosystem** — MNKY MUZIK is part of the MOOD MNKY ecosystem; full brand and ecosystem docs live at [docs.moodmnky.com](https://docs.moodmnky.com).
 
-Part of the [MOOD MNKY](https://docs.moodmnky.com) ecosystem. For brand and ecosystem context, see [docs.moodmnky.com](https://docs.moodmnky.com).
+MNKY MUZIK is a PWA that combines your local music stack (Navidrome, Lidarr) with optional Spotify integration and AI-powered discovery. Stream from Navidrome, connect Spotify for playlists and recommendations, request new music via Lidarr, and use AI to generate playlists from natural-language prompts. Playback is gated by Stripe subscription or beta access.
 
 ---
 
