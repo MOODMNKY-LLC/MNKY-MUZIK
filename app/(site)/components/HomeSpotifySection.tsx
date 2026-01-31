@@ -74,6 +74,9 @@ export function HomeSpotifySection() {
     }).finally(() => setReconnecting(false));
   };
 
+  // Match playlists page: fetch each Spotify API independently and use whatever succeeds.
+  // Previously we bailed on any 401 and never set playlists, so home showed "expired" even when
+  // playlists (same API as /playlists) would have succeeded.
   useEffect(() => {
     if (!isSpotifyLinked) {
       setLoading(false);
@@ -83,25 +86,29 @@ export function HomeSpotifySection() {
     setLoading(true);
     setError(null);
     setExpired(false);
-    const fetches = [
-      fetch('/api/spotify/user/playlists?limit=6', { credentials: 'include' }),
-      fetch('/api/spotify/user/saved-tracks?limit=6', { credentials: 'include' }),
-      fetch('/api/spotify/user/recommendations?limit=6', { credentials: 'include' }),
-    ];
-    Promise.all(fetches)
-      .then((responses) => {
+    const urls = [
+      '/api/spotify/user/playlists?limit=6',
+      '/api/spotify/user/saved-tracks?limit=6',
+      '/api/spotify/user/recommendations?limit=6',
+    ] as const;
+    Promise.all(urls.map((url) => fetch(url, { credentials: 'include' })))
+      .then(async (responses) => {
         if (cancelled) return;
-        const has401 = responses.some((r) => r.status === 401);
-        if (has401) {
-          setExpired(true);
-          return;
-        }
-        return Promise.all(responses.map((r) => (r.ok ? r.json() : null))).then(([pl, saved, rec]) => {
-          if (cancelled) return;
-          setPlaylists(pl);
-          setSavedTracks(saved);
-          setRecommendations(rec);
-        });
+        const [playlistsRes, savedTracksRes, recommendationsRes] = responses;
+        const playlists401 = playlistsRes.status === 401;
+        const savedTracks401 = savedTracksRes.status === 401;
+        const recommendations401 = recommendationsRes.status === 401;
+        if (playlists401) setExpired(true);
+        const [pl, saved, rec] = await Promise.all([
+          playlistsRes.ok ? playlistsRes.json() : null,
+          savedTracksRes.ok ? savedTracksRes.json() : null,
+          recommendationsRes.ok ? recommendationsRes.json() : null,
+        ]);
+        if (cancelled) return;
+        setPlaylists(pl ?? null);
+        setSavedTracks(saved ?? null);
+        setRecommendations(rec ?? null);
+        if (savedTracks401 || recommendations401) setExpired(true);
       })
       .catch(() => {
         if (!cancelled) setError('Failed to load Spotify content');
@@ -151,7 +158,12 @@ export function HomeSpotifySection() {
       </section>
     );
   }
-  if (expired) {
+  const hasPlaylists = playlists?.items?.length;
+  const hasSaved = savedTracks?.items?.length;
+  const hasRecs = recommendations?.tracks?.length;
+  const hasAnyContent = hasPlaylists || hasSaved || hasRecs;
+
+  if (expired && !hasAnyContent) {
     return (
       <section className="mt-6">
         <h2 className="text-white text-2xl font-semibold mb-4">From Spotify</h2>
@@ -169,7 +181,7 @@ export function HomeSpotifySection() {
       </section>
     );
   }
-  if (error) {
+  if (error && !hasAnyContent) {
     return (
       <section className="mt-6">
         <h2 className="text-white text-2xl font-semibold mb-4">From Spotify</h2>
@@ -178,11 +190,7 @@ export function HomeSpotifySection() {
     );
   }
 
-  const hasPlaylists = playlists?.items?.length;
-  const hasSaved = savedTracks?.items?.length;
-  const hasRecs = recommendations?.tracks?.length;
-
-  if (!hasPlaylists && !hasSaved && !hasRecs) {
+  if (!hasAnyContent) {
     return (
       <section className="mt-6">
         <h2 className="text-white text-2xl font-semibold mb-4">From Spotify</h2>
