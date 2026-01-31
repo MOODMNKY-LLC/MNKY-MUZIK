@@ -11,11 +11,18 @@ const PLACEHOLDER_KEY = 'placeholder-key'
 
 /**
  * OAuth callback route. Supabase redirects here with ?code=...&state=...&next=/
- * We run exchangeCodeForSession on this FIRST request (same request that has the
- * flow-state cookies), which fixes flow_state_not_found that occurred when we
- * did a client redirect to /auth/oauth and exchanged on the second request.
- * Session cookies are written onto the redirect response so the client receives
- * the session (including provider_token) on the next page load.
+ *
+ * Required order (await is critical):
+ * 1. await exchangeCodeForSession(code) — session (including provider_token) is received
+ *    and Supabase calls setAll() to write session cookies onto redirectRes.
+ * 2. Read provider_token / provider_refresh_token from the returned session immediately.
+ * 3. await token upsert to DB — persist tokens before sending the redirect.
+ * 4. return redirectRes — client must not land on home before DB has the row, or
+ *    /api/spotify/user/* will 401 (no tokens yet).
+ *
+ * We run the exchange on this FIRST request (same request that has the flow-state
+ * cookies), which fixes flow_state_not_found that occurred when we did a client
+ * redirect to /auth/oauth and exchanged on the second request.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -60,7 +67,11 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error && data?.session) {
       const s = data.session as { provider_token?: string; provider_refresh_token?: string }
-      if (s?.provider_token && s?.provider_refresh_token && data.session.user?.id) {
+      // Capture tokens immediately after exchange so we never persist before they're received.
+      const accessToken = s?.provider_token
+      const refreshToken = s?.provider_refresh_token
+      const userId = data.session.user?.id
+      if (accessToken && refreshToken && userId) {
         const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
         const isProd = process.env.NODE_ENV === 'production'
         if (isProd && (!serviceRoleKey || serviceRoleKey === 'placeholder-service-role-key')) {
@@ -69,13 +80,13 @@ export async function GET(request: Request) {
               'Spotify tokens cannot be saved; set it in your production env (e.g. Vercel) so "From Spotify" works.'
           )
         } else {
-          // Use service role so the upsert always succeeds (no RLS/cookie dependency).
+          // Persist tokens before sending redirect (client must not land on home before DB has row).
           const expiresAt = new Date(Date.now() + 3600 * 1000).toISOString()
           const { error: upsertError } = await supabaseAdmin.from('user_spotify_tokens').upsert(
             {
-              user_id: data.session.user.id,
-              access_token: s.provider_token,
-              refresh_token: s.provider_refresh_token,
+              user_id: userId,
+              access_token: accessToken,
+              refresh_token: refreshToken,
               expires_at: expiresAt,
               updated_at: new Date().toISOString(),
             },

@@ -7,6 +7,8 @@ This app uses Spotify as an OAuth provider alongside email/password. The same Sp
 
 **User flow**: Login/Sign up → authenticate with Spotify → redirect to home → "From Spotify" section loads playlists, saved tracks, and recommendations. The browser client uses PKCE by default (`@supabase/ssr`); the code is exchanged in `/auth/callback` on the first request and session cookies are set on the redirect response.
 
+**Await order in callback**: The callback must (1) `await supabase.auth.exchangeCodeForSession(code)` so the session (including `provider_token`) is received, (2) read tokens from the returned session immediately, (3) `await` the token upsert to the DB, and only then (4) return the redirect. Returning the redirect before token persistence completes can cause the client to land on home before the DB has the row, so `/api/spotify/user/*` returns 401.
+
 ## Redirect URIs (Spotify Developer Dashboard)
 
 1. Open [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) → your app → Edit Settings.
