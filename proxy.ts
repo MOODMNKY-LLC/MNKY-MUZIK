@@ -7,12 +7,15 @@ import { NextResponse } from 'next/server';
  * Replaces the deprecated middleware convention.
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/proxy
  *
- * Skip session refresh for /api/* routes: getUser() refreshes the Supabase session
- * and nulls provider_token (Spotify). API routes need provider_token for user-scoped
- * Spotify calls, so we must not run updateSession before them.
+ * Skip updateSession for:
+ * - /api/*: getUser() refreshes the Supabase session and nulls provider_token (Spotify).
+ *   API routes use DB for Spotify tokens; avoid running session refresh before them.
+ * - /auth/callback: OAuth callback must run without touching session so PKCE exchange
+ *   and session cookies are set by the route handler only (Spotify session persists).
  */
 export async function proxy(request: NextRequest) {
-  if (request.nextUrl.pathname.startsWith('/api/')) {
+  const pathname = request.nextUrl.pathname;
+  if (pathname.startsWith('/api/') || pathname === '/auth/callback') {
     return NextResponse.next({ request });
   }
   try {

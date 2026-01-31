@@ -41,8 +41,8 @@ In **production**, users can see “error after authenticating” if the app’s
 
 Spotify access tokens expire (typically after 1 hour). Supabase does **not** refresh provider tokens; when Supabase refreshes its own session via `getUser()`, it sets `provider_token` to null. To avoid this:
 
-- The proxy skips `updateSession` (which calls `getUser()`) for `/api/*` routes. This keeps `provider_token` in the session when API routes read it.
-- Page requests still run the proxy for normal Supabase session refresh.
+- The proxy skips `updateSession` (which calls `getUser()`) for **`/api/*`** and **`/auth/callback`**. Skipping the callback ensures the OAuth route handler alone sets session cookies (no session refresh touching PKCE or overwriting the new session). Skipping `/api/*` avoids refreshing before API routes read tokens from the DB.
+- Page requests (e.g. `/`) still run the proxy for normal Supabase session refresh; after refresh the session no longer has `provider_token`, so API routes rely on **`user_spotify_tokens`** (saved in the callback).
 - The API routes use `refreshSpotifyToken()` when the access token is expired; they require `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` in the environment.
 
 If user-scoped Spotify features (playlists, saved tracks, recommendations) stop loading or return 401:
