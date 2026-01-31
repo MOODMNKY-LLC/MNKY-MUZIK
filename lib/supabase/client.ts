@@ -11,6 +11,11 @@ const supabaseKey =
 
 let browserClient: ReturnType<typeof createBrowserClient<Database>> | null = null;
 
+/**
+ * Browser Supabase client. @supabase/ssr createBrowserClient uses PKCE flow by default
+ * and persistSession/detectSessionInUrl, so OAuth redirects are exchanged server-side in
+ * /auth/callback and session cookies are set on the redirect response.
+ */
 export function createClient() {
   if (browserClient) {
     return browserClient;

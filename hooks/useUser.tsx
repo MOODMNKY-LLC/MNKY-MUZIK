@@ -1,8 +1,11 @@
 import type { User, Session } from '@supabase/supabase-js';
-import { useState, createContext, useEffect, useContext, useMemo } from 'react';
+import { useState, createContext, useEffect, useContext, useMemo, useRef } from 'react';
 
 import { useSupabaseClient } from '@/providers/SupabaseProvider';
 import type { UserDetails, UserRole, Subscription } from '@/types';
+
+/** Retry delays (ms) for /api/spotify/user/linked after OAuth redirect (handles DB/cookie propagation). */
+const LINKED_CHECK_RETRY_DELAYS = [0, 400, 1200];
 
 type UserContextType = {
   accessToken: string | null;
@@ -68,17 +71,53 @@ export const MyUserContextProvider = (props: Props) => {
   const spotifyAccessToken = session?.provider_token ?? null;
   const spotifyRefreshToken = session?.provider_refresh_token ?? null;
 
-  // When session.provider_token is null (e.g. after Supabase refresh), check DB via API
+  // When session.provider_token is null (e.g. after Supabase refresh or post-OAuth redirect), check DB via API.
+  // Retry a few times after redirect so we catch DB/cookie propagation delay.
   const [dbSpotifyLinked, setDbSpotifyLinked] = useState<boolean | null>(null);
+  const linkedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!user || spotifyAccessToken) {
       setDbSpotifyLinked(null);
       return;
     }
-    fetch('/api/spotify/user/linked', { credentials: 'include' })
-      .then((r) => r.json())
-      .then((data: { linked?: boolean }) => setDbSpotifyLinked(data.linked === true))
-      .catch(() => setDbSpotifyLinked(false));
+    let cancelled = false;
+    const checkLinked = (attemptIndex: number) => {
+      const delay = LINKED_CHECK_RETRY_DELAYS[attemptIndex] ?? 0;
+      linkedTimeoutRef.current = setTimeout(() => {
+        linkedTimeoutRef.current = null;
+        if (cancelled) return;
+        fetch('/api/spotify/user/linked', { credentials: 'include' })
+          .then((r) => r.json())
+          .then((data: { linked?: boolean }) => {
+            if (cancelled) return;
+            if (data.linked === true) {
+              setDbSpotifyLinked(true);
+              return;
+            }
+            if (attemptIndex < LINKED_CHECK_RETRY_DELAYS.length - 1) {
+              checkLinked(attemptIndex + 1);
+            } else {
+              setDbSpotifyLinked(false);
+            }
+          })
+          .catch(() => {
+            if (cancelled) return;
+            if (attemptIndex < LINKED_CHECK_RETRY_DELAYS.length - 1) {
+              checkLinked(attemptIndex + 1);
+            } else {
+              setDbSpotifyLinked(false);
+            }
+          });
+      }, delay);
+    };
+    checkLinked(0);
+    return () => {
+      cancelled = true;
+      if (linkedTimeoutRef.current !== null) {
+        clearTimeout(linkedTimeoutRef.current);
+        linkedTimeoutRef.current = null;
+      }
+    };
   }, [user, spotifyAccessToken]);
 
   const isSpotifyLinked = Boolean(spotifyAccessToken) || dbSpotifyLinked === true;

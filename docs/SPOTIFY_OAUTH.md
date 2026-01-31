@@ -5,6 +5,8 @@ This app uses Spotify as an OAuth provider alongside email/password. The same Sp
 - **Client Credentials** (server): public metadata in `libs/spotify.ts` (search, artist, album).
 - **OAuth login**: Supabase Auth → Spotify; after sign-in the session includes `provider_token` for user-scoped Spotify Web API calls.
 
+**User flow**: Login/Sign up → authenticate with Spotify → redirect to home → "From Spotify" section loads playlists, saved tracks, and recommendations. The browser client uses PKCE by default (`@supabase/ssr`); the code is exchanged in `/auth/callback` on the first request and session cookies are set on the redirect response.
+
 ## Redirect URIs (Spotify Developer Dashboard)
 
 1. Open [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) → your app → Edit Settings.
@@ -61,3 +63,5 @@ In production, the "From Spotify" section (playlists, saved tracks, recommendati
 3. **Redirect URLs**: In Supabase Dashboard → Auth → URL Configuration, add your production callback under Redirect URLs (e.g. `https://your-domain.com/auth/callback`). The Site URL should match your production origin.
 
 4. **API routes and cookies**: The client calls `/api/spotify/user/linked` with `credentials: 'include'` so cookies are sent. If "From Spotify" is empty in production, confirm the session cookie is present and sent on same-origin API requests (e.g. in DevTools → Application → Cookies).
+
+5. **Linked check retries**: After redirect, the client may get a refreshed session without `provider_token`. The app then checks the DB via `/api/spotify/user/linked` and retries a few times (0 ms, 400 ms, 1200 ms) to handle brief DB/cookie propagation delay. If it still shows as not linked, ensure the callback successfully wrote to `user_spotify_tokens` (see point 2).
