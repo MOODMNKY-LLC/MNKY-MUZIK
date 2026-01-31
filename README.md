@@ -1,50 +1,58 @@
-# Full Stack Spotify Clone
+# MNKY MUZIK
 
-Explore this extensive tutorial to develop a complete Spotify clone from scratch using the latest in web development technologies. This project demonstrates the creation of a sleek, dynamic, and responsive UI, robust backend functionalities, and a seamless payment system using Stripe.
+![MNKY MUZIK](docs/images/mnky-muzik-app-icon.png)
+
+**A self-hosted, Spotify-style music experience.**
+
+MNKY MUZIK is a PWA that combines your local music stack (Navidrome, Lidarr) with optional Spotify integration and AI-powered discovery. Stream from Navidrome, connect Spotify for playlists and recommendations, request new music via Lidarr, and use AI to generate playlists from natural-language prompts. Playback is gated by Stripe subscription or beta access.
+
+Part of the [MOOD MNKY](https://docs.moodmnky.com) ecosystem. For brand and ecosystem context, see [docs.moodmnky.com](https://docs.moodmnky.com).
+
+---
+
+## Live app
+
+**[https://muzik.moodmnky.com](https://muzik.moodmnky.com)**
+
+---
 
 ## Features
 
-- **Song Upload**: Upload and manage your music files with ease.
+- **Authentication** — Email/password sign-up and login (Supabase Auth); optional [Sign in with Spotify](docs/SPOTIFY_OAUTH.md) (OAuth) for playlists, saved tracks, and recommendations.
+- **Navidrome** — Stream and browse your music library (albums, artists, playlists); scrobbling and “liked” tracks.
+- **Lidarr** — Request new artists/albums; enriched search with Spotify and MusicBrainz; “already in library” from Navidrome.
+- **Spotify** — When connected: playlists, saved tracks, recommendations on home and account; token refresh on 401.
+- **AI** — Generate playlists from natural-language prompts; “describe search” for unified search.
+- **Subscription & beta** — Stripe subscription or [beta code](docs/BETA_ACCESS.md) to unlock playback.
+- **PWA** — Installable app; responsive UI with queue, player, and now-playing.
 
-- **Stripe Integration**: Enable premium subscriptions within the application using Stripe for payment processing.
+---
 
-- **Database Handling**: Learn to set up a Supabase project, create database schemas, and manage data with PostgreSQL.
+## Tech stack
 
-- **Sleek User Interface**: Using Tailwind CSS, create a UI that closely resembles Spotify's sleek design.
+- **Frontend:** Next.js (App Router), React, TypeScript, Tailwind CSS, ShadCN UI
+- **Auth & backend:** Supabase (Auth, Postgres, Storage), Stripe
+- **Music:** Navidrome (Subsonic API), Lidarr, Spotify Web API (client credentials + OAuth), MusicBrainz (optional)
+- **AI:** OpenAI (playlist and search describe)
 
-- **Responsiveness**: This application is fully responsive and compatible with all devices.
+```mermaid
+flowchart LR
+  subgraph ecosystem [MOOD MNKY Ecosystem]
+    MNKYVERSE[MNKY VERSE]
+    TRVLR[TRVLR Sync]
+    Shopify[Shopify App]
+    MNKYMUZIK[MNKY MUZIK]
+  end
+  MNKYMUZIK --> Supabase[Supabase]
+  MNKYMUZIK --> Navidrome[Navidrome]
+  MNKYMUZIK --> Stripe[Stripe]
+```
 
-- **Authentication**: Secure user registration and login processes with Supabase.
+---
 
-- **GitHub Authentication Integration**: Enable secure login using Github authentication.
+## Getting started
 
-- **File/Image Upload**: Upload files and images using Supabase storage.
-
-- **Form Validation**: Efficient client form validation and handling using react-hook-form.
-
-- **Error Handling**: Smooth server error handling with react-toast.
-
-- **Audio Playback**: Enable song playback within the application.
-
-- **Favorites System**: Users can mark songs as favorites.
-
-- **Playlists / Liked Songs System**: Create and manage song playlists.
-
-- **Advanced Player Component**: Explore the functionality of an advanced music player component.
-
-- **Stripe Recurring Payment Integration**: Manage recurring payments and subscriptions using Stripe.
-
-- **POST, GET, and DELETE Routes**: Learn to write and manage these crucial routes in route handlers (app/api).
-
-- **Data Fetching**: Master fetching data in server React components by directly accessing the database without API, like magic!
-
-- **Handling Relations**: Handle relations between Server and Child components in a real-time environment.
-
-- **Cancelling Stripe Subscriptions**: Learn how to cancel Stripe subscriptions within the application.
-
-## Getting Started
-
-This project uses **pnpm**. Install dependencies and run the dev server:
+This project uses **pnpm**. Install and run:
 
 ```bash
 pnpm install
@@ -72,27 +80,25 @@ Other commands: `pnpm build`, `pnpm start`, `pnpm lint`.
    - **Events:** `product.created`, `product.updated`, `price.created`, `price.updated`, `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`
    - Copy the signing secret into `.env.local` as `STRIPE_WEBHOOK_SECRET`.
 
-## Built With
+---
 
-- Next.js 15
-- React
-- Tailwind CSS
-- Supabase
-- PostgreSQL
-- Stripe
-- react-hook-form
-- react-toast
+## Documentation
+
+- [PRD.md](PRD.md) — Product requirements and technical overview
+- [docs/BETA_ACCESS.md](docs/BETA_ACCESS.md) — Beta code and playback access
+- [docs/SPOTIFY_OAUTH.md](docs/SPOTIFY_OAUTH.md) — Spotify OAuth and redirect URLs
+- [docs/ENV_VERCEL.md](docs/ENV_VERCEL.md) — Production environment variables checklist
+- [docs/SUPABASE_LOCAL.md](docs/SUPABASE_LOCAL.md) — Local Supabase setup
+- [docs.moodmnky.com](https://docs.moodmnky.com) — MOOD MNKY ecosystem and brand
+
+---
 
 ## License
 
 This project is licensed under the terms of the MIT license.
 
+---
+
 ## Contributions
 
-Contributions, issues, and feature requests are welcome!
-
-## Get in Touch
-
-<b>Email: </b> tech@allanswebwork.info <br/>
-<b>LinkedIn: </b> [https://www.linkedin.com/in/allanhillman/](https://www.linkedin.com/in/allanhillman/)  <br/>
-<b>Website: </b> [https://allanhillman.com](https://allanhillman.com/)
+Contributions, issues, and feature requests are welcome. For ecosystem and support context, see [docs.moodmnky.com](https://docs.moodmnky.com).
