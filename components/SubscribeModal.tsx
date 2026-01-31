@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
 import { toast } from 'react-hot-toast';
 
@@ -16,6 +16,8 @@ import { Button } from './Button';
 import { useSubscribeModal } from '@/hooks/useSubscribeModal';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+
+const BETA_PIN_LENGTH = 5;
 
 interface subscribeModalProps {
   products: ProductWithPrice[];
@@ -34,7 +36,41 @@ const SubscribeModal: React.FC<subscribeModalProps> = ({ products }) => {
   const [priceIdLoading, setPriceIdLoading] = useState<string>();
   const [betaPin, setBetaPin] = useState('');
   const [betaLoading, setBetaLoading] = useState(false);
+  const pinInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const { user, isLoading, subscription, canPlay, role, refetchUserData } = useUser();
+
+  const setPinDigit = useCallback((index: number, value: string) => {
+    const digit = value.replace(/\D/g, '').slice(-1);
+    setBetaPin((prev) => {
+      const next = prev.slice(0, index) + digit + prev.slice(index + 1);
+      return next.slice(0, BETA_PIN_LENGTH);
+    });
+    if (digit && index < BETA_PIN_LENGTH - 1) {
+      pinInputRefs.current[index + 1]?.focus();
+    }
+  }, []);
+
+  const handlePinKeyDown = useCallback((index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !betaPin[index] && index > 0) {
+      pinInputRefs.current[index - 1]?.focus();
+    }
+    if (e.key === 'ArrowLeft' && index > 0) {
+      pinInputRefs.current[index - 1]?.focus();
+    }
+    if (e.key === 'ArrowRight' && index < BETA_PIN_LENGTH - 1) {
+      pinInputRefs.current[index + 1]?.focus();
+    }
+  }, [betaPin]);
+
+  const handlePinPaste = useCallback((e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, BETA_PIN_LENGTH);
+    if (pasted) {
+      setBetaPin(pasted);
+      const nextIndex = Math.min(pasted.length, BETA_PIN_LENGTH - 1);
+      pinInputRefs.current[nextIndex]?.focus();
+    }
+  }, []);
 
   const onChange = (open: boolean) => {
     if (!open) {
@@ -144,22 +180,36 @@ const SubscribeModal: React.FC<subscribeModalProps> = ({ products }) => {
         {content}
         <div className="border-t pt-4">
           <p className="text-xs text-muted-foreground mb-2">Have a beta code? Ask your admin for one.</p>
-          <form onSubmit={handleBetaVerify} className="flex gap-2">
-            <div className="flex-1 grid gap-1">
-              <Label htmlFor="beta-pin" className="sr-only">
-                Beta code
+          <form onSubmit={handleBetaVerify} className="flex flex-col gap-3">
+            <div className="flex items-center justify-center gap-2">
+              <Label htmlFor="beta-pin-0" className="sr-only">
+                Beta code (5 digits)
               </Label>
-              <Input
-                id="beta-pin"
-                type="text"
-                placeholder="Enter code"
-                value={betaPin}
-                onChange={(e) => setBetaPin(e.target.value)}
-                disabled={betaLoading}
-                className="h-9"
-              />
+              {Array.from({ length: BETA_PIN_LENGTH }, (_, i) => (
+                <Input
+                  key={i}
+                  id={i === 0 ? 'beta-pin-0' : undefined}
+                  ref={(el) => { pinInputRefs.current[i] = el; }}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                  maxLength={1}
+                  placeholder="•"
+                  value={betaPin[i] ?? ''}
+                  onChange={(e) => setPinDigit(i, e.target.value)}
+                  onKeyDown={(e) => handlePinKeyDown(i, e)}
+                  onPaste={i === 0 ? handlePinPaste : undefined}
+                  disabled={betaLoading}
+                  className="h-11 w-11 text-center text-lg font-semibold tabular-nums"
+                  aria-label={`Digit ${i + 1} of 5`}
+                />
+              ))}
             </div>
-            <Button type="submit" disabled={betaLoading || !betaPin.trim()} className="h-9">
+            <Button
+              type="submit"
+              disabled={betaLoading || betaPin.length !== BETA_PIN_LENGTH}
+              className="h-9 w-full"
+            >
               {betaLoading ? 'Checking...' : 'Apply'}
             </Button>
           </form>
