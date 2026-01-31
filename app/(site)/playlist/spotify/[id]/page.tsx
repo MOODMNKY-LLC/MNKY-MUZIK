@@ -53,22 +53,8 @@ export default function SpotifyPlaylistPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (!id) return null;
-  if (loading) return <div className="px-4 sm:px-6 py-8 text-neutral-400">Loading…</div>;
-  if (error || !data) {
-    return (
-      <div className="px-4 sm:px-6 py-8">
-        <p className="text-amber-400">{error ?? 'Playlist not found'}</p>
-        <Link href="/playlists" className="text-emerald-400 hover:underline mt-2 inline-block">
-          Back to playlists
-        </Link>
-      </div>
-    );
-  }
-
-  const img = data.images?.[0]?.url ?? '/images/liked.png';
-  const tracks = data.tracks?.items?.filter((i) => i.track != null) ?? [];
-
+  // All hooks must run unconditionally (before any early return) to avoid React #310.
+  const tracks = data?.tracks?.items?.filter((i) => i.track != null) ?? [];
   const spotifyTracks: SpotifyTrack[] = useMemo(
     () =>
       tracks.map((item) => {
@@ -85,6 +71,21 @@ export default function SpotifyPlaylistPage() {
     [tracks]
   );
   const onPlay = useOnPlay(spotifyTracks);
+
+  if (!id) return null;
+  if (loading) return <div className="px-4 sm:px-6 py-8 text-neutral-400">Loading…</div>;
+  if (error || !data) {
+    return (
+      <div className="px-4 sm:px-6 py-8">
+        <p className="text-amber-400">{error ?? 'Playlist not found'}</p>
+        <Link href="/playlists" className="text-emerald-400 hover:underline mt-2 inline-block">
+          Back to playlists
+        </Link>
+      </div>
+    );
+  }
+
+  const img = data.images?.[0]?.url ?? '/images/liked.png';
 
   return (
     <div className="bg-neutral-900 rounded-lg w-full">
