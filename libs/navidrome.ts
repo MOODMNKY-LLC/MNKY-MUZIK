@@ -7,7 +7,7 @@
 import { randomBytes, createHash } from 'crypto';
 
 const SUBSONIC_VERSION = '1.16.1';
-const CLIENT_NAME = 'spotify-clone';
+const CLIENT_NAME = 'mnky-muzik';
 
 function getConfig(): { baseUrl: string; user: string; password: string } | null {
   const baseUrl = process.env.NAVIDROME_URL?.trim()?.replace(/\/$/, '');
